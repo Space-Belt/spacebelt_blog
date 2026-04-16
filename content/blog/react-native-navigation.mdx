@@ -1,0 +1,24 @@
+---
+title: "React Native 화면 구조를 나누는 방법"
+description: "탭, 스택, 모달을 어떤 기준으로 나누면 앱의 흐름이 안정되는지 정리했습니다."
+date: "2026-04-02"
+tags: ["React Native", "Navigation", "Mobile"]
+---
+
+## 화면 구조가 먼저다
+
+앱에서는 상태 관리보다 화면 구조가 먼저입니다. 사용자가 어느 화면에서 뒤로 갈 수 있는지, 어떤 화면이 임시 흐름인지가 정해져야 데이터도 자연스럽게 따라옵니다.
+
+## 탭과 스택
+
+탭은 제품의 큰 영역이고, 스택은 한 영역 안에서 깊어지는 흐름입니다. 결제, 작성, 필터처럼 잠깐 열렸다 닫히는 흐름은 모달로 분리하는 편이 명확했습니다.
+
+```tsx
+<Tabs.Screen name="Home" />
+<Stack.Screen name="ProductDetail" />
+<Stack.Screen name="CheckoutModal" options={{ presentation: "modal" }} />
+```
+
+## 기록할 것
+
+프로젝트 문서에는 라우트 이름만 적지 않고, 화면의 책임과 진입 경로를 함께 적는 것이 좋았습니다.

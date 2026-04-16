@@ -1,0 +1,46 @@
+---
+title: "[React Query Error] Query data cannot be undefined"
+description: "에러 기록 !"
+date: "2024-07-09"
+tags: ["React","error","reactquery","기록"]
+---
+
+### 문제 발생 코드
+
+```jsx
+const {data: waitingDetailInfo, refetch} = useQuery({
+    queryKey: ['waitingDetailInfo'],
+    queryFn: () => {
+		 getWaitingDetail(route.params.movieId);
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+```
+
+에러 발생 원인 
+
+- useQuery에 등록한 함수가 Promise를 반환하지 않았기에 발생한 오류.
+- async await을 사용한 함수를 등록했더라도 발생한다.
+- 즉, Promise 반환 함수를 등록해도, 호출만하지 return 해주는곳이 없어서 발생한 오류다.
+- 따라서 아래와 같이 해결한다.
+
+### 해결![](https://velog.velcdn.com/images/spacebelt/post/582dcf53-1849-4440-8793-ad8f57dd20d3/image.png)
+ 코드
+
+```jsx
+// 1 함수 리턴해주기
+const {data: waitingDetailInfo, refetch} = useQuery({
+    queryKey: ['waitingDetailInfo'],
+    queryFn: () => {
+		 return getWaitingDetail(route.params.id);
+    },
+    staleTime: 5 * 60 * 1000,
+});
+
+// 2 Arrow Function 활용
+const {data: waitingDetailInfo, refetch} = useQuery({
+    queryKey: ['waitingDetailInfo'],
+    queryFn: () => getWaitingDetail(route.params.id),
+    staleTime: 5 * 60 * 1000,
+});
+```

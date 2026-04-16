@@ -1,0 +1,168 @@
+---
+title: "Claude Code로 코드베이스를 읽고 리뷰하는 방법"
+description: "Claude Code의 Plan Mode, 파일 참조, CLAUDE.md, 테스트 흐름을 활용해 프론트엔드 코드를 안전하게 이해하고 고치는 방법입니다."
+date: "2026-04-13"
+tool: "Claude Code"
+level: "Code Reading"
+tags: ["AI", "Claude Code", "Code Review", "Architecture", "Frontend"]
+---
+
+## Claude Code는 대화형 Claude와 달랐다
+
+Claude Code는 일반 챗봇처럼 설명만 해주는 도구가 아니었다. 터미널과 IDE 안에서 코드베이스를 읽고, 파일을 수정하고, 명령어를 실행하고, git 작업까지 이어갈 수 있는 개발용 AI 도구였다.
+
+그래서 Claude Code를 사용할 때는 "설명해줘"만 잘하는 것이 아니라, 어떤 파일을 읽고, 어떤 범위까지 수정하고, 어떤 명령으로 검증해야 하는지를 함께 정하는 것이 중요했다.
+
+<Callout>
+Claude Code는 코드를 읽는 도구이면서 동시에 코드를 바꿀 수 있는 도구다. 그래서 좋은 사용법은 탐색과 수정의 경계를 분명히 나누는 것에서 시작했다.
+</Callout>
+
+## 처음에는 코드베이스 탐색부터 맡기기 좋았다
+
+새 프로젝트를 열었을 때 바로 코드를 고치게 하면 위험했다. 먼저 구조를 이해해야 했다. Claude Code는 프로젝트 루트에서 시작해 전체 구조를 훑고, 중요한 파일과 흐름을 설명하게 하기 좋았다.
+
+```txt
+이 코드베이스를 처음 보는 개발자라고 생각하고 overview를 정리해줘.
+
+보고 싶은 것:
+- 주요 폴더 역할
+- 라우팅 구조
+- 상태 관리 방식
+- API 요청 위치
+- 공통 컴포넌트 패턴
+- 먼저 읽어야 할 파일 순서
+```
+
+이런 질문은 단순 요약보다 좋았다. Claude Code가 어떤 관점으로 코드를 읽어야 하는지 알려주기 때문이다.
+
+## Plan Mode는 큰 변경 전에 안전장치가 되었다
+
+큰 리팩터링이나 여러 파일을 건드리는 작업은 바로 수정하지 않는 편이 좋았다. Claude Code의 Plan Mode는 이럴 때 유용했다. 먼저 코드를 읽고 요구사항을 확인한 뒤, 변경 계획을 세우는 흐름으로 사용할 수 있었다.
+
+```txt
+Plan Mode로 먼저 분석해줘.
+
+목표:
+React Native 앱의 상품 상세 화면에서 옵션 선택 상태를 정리한다.
+
+확인할 것:
+- 옵션 상태가 어디에서 만들어지는지
+- 가격 계산이 어디에서 일어나는지
+- cart store와 화면 state가 겹치는지
+- navigation 흐름에 영향이 있는지
+- 테스트해야 할 케이스
+
+아직 코드는 수정하지 말고 계획만 작성해줘.
+```
+
+이 방식은 특히 React Native에서 좋았다. 화면 하나처럼 보여도 navigation, store, API cache, gesture, modal이 함께 엮일 수 있기 때문이었다.
+
+## @파일 참조는 context를 정확히 주는 방법이었다
+
+Claude Code에서는 `@`로 파일이나 디렉터리를 빠르게 참조할 수 있었다. 이 기능은 "알아서 찾아봐"보다 훨씬 안정적이었다.
+
+```txt
+@src/app/page.tsx 와 @src/app/globals.css 를 보고
+홈 화면이 모바일에서 답답해 보이는 원인을 찾아줘.
+아직 수정하지 말고 원인과 수정 방향만 정리해줘.
+```
+
+파일을 직접 지정하면 Claude Code가 불필요한 범위를 탐색하는 일을 줄일 수 있었다. 디렉터리를 참조할 때는 전체 파일 내용이 아니라 구조 파악에 도움이 되는 목록을 줄 수 있어서, 큰 프로젝트에서 시작점을 잡기 좋았다.
+
+## CLAUDE.md는 반복 설명을 줄여주었다
+
+Claude Code를 반복해서 사용할수록 같은 말을 계속 하게 된다. 예를 들어 "빌드 확인해줘", "기존 패턴 따라줘", "새 라이브러리는 묻고 추가해줘", "모바일 레이아웃 깨지지 않게 해줘" 같은 말이었다.
+
+이런 규칙은 `CLAUDE.md`에 넣는 것이 좋았다.
+
+```md
+# CLAUDE.md
+
+## Project Rules
+
+- Use TypeScript for new files.
+- Follow existing Next.js App Router patterns.
+- Do not add dependencies without asking.
+- Run `npm run build` after route, MDX, or content loader changes.
+- Keep text readable on mobile screens.
+- Do not rewrite unrelated files.
+```
+
+`CLAUDE.md`는 Claude Code가 세션을 시작할 때 읽는 프로젝트 메모리였다. 신입 개발자에게 온보딩 문서를 주는 것과 비슷했다. 프로젝트의 약속을 문서로 남겨두면 매번 프롬프트에 같은 내용을 적지 않아도 되었다.
+
+## 리뷰 요청은 수정 요청과 분리하는 편이 좋았다
+
+Claude Code는 코드를 수정할 수 있기 때문에, 리뷰만 받고 싶을 때는 명확히 말해야 했다.
+
+```txt
+리뷰만 해줘. 아직 파일은 수정하지 마.
+
+중점:
+- 상태 위치가 적절한지
+- useEffect가 불필요하게 쓰였는지
+- 접근성 문제가 있는지
+- 모바일에서 레이아웃이 깨질 수 있는지
+- 테스트가 빠진 흐름이 있는지
+```
+
+이런 요청은 코드 리뷰에 잘 맞았다. Claude Code가 발견한 문제를 바로 고치게 할 수도 있지만, 먼저 검토 목록으로 받은 뒤 개발자가 우선순위를 정하는 편이 안전했다.
+
+## 테스트 보강도 좋은 사용 사례였다
+
+Claude Code는 기존 테스트 스타일을 읽고 비슷한 방식으로 테스트를 추가하는 작업에 잘 맞았다.
+
+```txt
+@src/lib/content.ts 를 기준으로 테스트해야 할 edge case를 찾아줘.
+그 다음 기존 테스트 패턴이 있으면 맞춰서 테스트를 추가해줘.
+마지막에 테스트 명령을 실행하고 실패하면 원인을 고쳐줘.
+```
+
+테스트는 AI가 만든 코드의 안전장치였다. 특히 프론트엔드에서는 화면이 그럴듯하게 보여도 상태 전환이나 데이터 파싱이 틀릴 수 있었다. 그래서 테스트 가능한 로직은 최대한 분리하고, Claude Code에게 테스트 후보를 찾게 하는 것이 좋았다.
+
+## worktree는 병렬 작업에 도움이 되었다
+
+여러 작업을 동시에 진행할 때는 같은 파일을 동시에 건드리면 충돌이 생길 수 있었다. Claude Code는 worktree 기반으로 별도 작업 공간을 만들어 병렬 작업을 진행하는 흐름을 지원했다.
+
+```bash
+claude --worktree feature-search
+claude --worktree fix-mobile-layout
+```
+
+이 방식은 큰 프로젝트에서 특히 유용했다. 한 세션은 검색 기능을 만들고, 다른 세션은 모바일 레이아웃을 점검할 수 있었다. 다만 병렬 작업은 충돌 가능성도 커지기 때문에, 최종 merge 전에는 사람이 diff를 꼼꼼히 확인해야 했다.
+
+## 좋은 Claude Code 요청의 구조
+
+Claude Code에게는 다음 구조로 요청하는 편이 좋았다.
+
+```txt
+목표:
+무엇을 하려는지 한 문장으로 적는다.
+
+Context:
+봐야 할 파일, 에러 로그, 재현 방법을 적는다.
+
+Mode:
+지금은 분석만 할지, 계획만 할지, 바로 수정해도 되는지 적는다.
+
+Constraints:
+건드리면 안 되는 부분, 따라야 할 패턴, 새 의존성 제한을 적는다.
+
+Done when:
+어떤 명령과 화면 확인이 끝나야 완료인지 적는다.
+```
+
+이 구조는 Claude Code뿐 아니라 Codex를 사용할 때도 좋았다. AI에게 맥락을 정확히 주면 결과도 안정적이었다.
+
+## 결론
+
+Claude Code는 일반 Claude 채팅처럼 개념을 설명받는 도구만은 아니었다. 코드베이스 안에서 탐색, 계획, 수정, 테스트, git 작업까지 이어갈 수 있는 개발 에이전트였다.
+
+잘 쓰기 위해서는 먼저 탐색과 수정을 분리해야 했다. 큰 작업은 Plan Mode로 시작하고, 필요한 파일은 `@`로 정확히 지정하고, 반복 규칙은 `CLAUDE.md`에 남기고, 테스트와 빌드로 결과를 확인해야 했다.
+
+AI가 코드를 바꿀 수 있는 시대에는 질문을 잘하는 것만으로는 부족했다. 어떤 맥락을 줄지, 어디까지 맡길지, 어떻게 검증할지를 설계하는 능력이 개발자의 실력이 되었다.
+
+## 참고한 공식 문서
+
+- [Claude Code Overview](https://code.claude.com/docs/en/overview)
+- [Claude Code Common Workflows](https://code.claude.com/docs/en/common-workflows)
+- [How Claude remembers your project](https://code.claude.com/docs/en/memory)

@@ -1,0 +1,137 @@
+---
+title: "[React Native] RN의 동작 과정과 Animated / ReAnimated"
+description: "Animated, Reanimated"
+date: "2024-03-13"
+tags: ["reactnative"]
+---
+
+---
+
+> React Native를 알아가면서 웹에서는 Transition으로 손쉽게 구현했던 것들을 어떻게 구현하는지 알아보던중 어떤식으로 작동하는지 등이 궁금해져 관련하여 블로그 포스팅을 하게 되었다.
+> 
+
+리엑트 네이티브는 3가지 병렬 스레드를 가지고 있다.
+
+1. **Main Thread (UI Thread, Base Thread)** 
+    - 사용자 인터페이스를 핸들링하는 역할을 한다.
+    - UI를 업데이트 하거나, 기본 기능에 액세스를 해야할 때 JS 스레드와 통신한다.
+    - 즉, UI렌더링에 사용되고 네이티브 모듈을 사용할때 사용된다.
+2. **Shadow Thread**
+    - 레이아웃이 계산되는 쓰레드다. facebook 자체 레이아웃 엔진 **Yoga 를** 사용해 flexbox 레이아웃을 계산하고 UI 쓰레드로 다시 보내는 역할을 한다.
+3. **JS Thread**
+    - 모든 자바 스크립트 코드를 읽고, 컴파일 및 응용프로그램의 비즈니스 로직 대부분이 일어난다. 즉 자바스크립트 엔진을 통해 자바스크립트 코드를 읽고 실행하는 역할을 한다.
+    - JS 스레드는 좋은 성능 유지를 위해 다음 프레임 렌더링 데드라인 전에 배치 업데이트를 UI 스레드에 전달할 수 있어야한다.
+
+간단한 리엑트네이티브 흐름
+
+1. 버튼 클릭 
+2. 클릭 이벤트는 native thread 에서 브릿지를 통해 js thread 실행
+3. 해당 결과 값을 브릿지 통해 다시 native thread에 전달 → 유저에게 해당 이벤트에 맞게 화면 보여준다.
+
+화면(애니메이션)이 부드럽게 진행되기 위해서는 초당 60 프레임. 즉, 16.67ms 마다 하나의 새로운 프레임을 만들고 이어지게 해야한다. 이때, UI스레드와 JS스레드 간의 통신이 비동기 적으로 실행되는 문제로 인해, 복잡한 처리를 수행할 경우 16.67ms 내에 1프레임을 생성하고 이어지게 하지 못한다면 UI에 버벅임이 나타난다. 
+
+이때 JS 스레드와 관련없이 UI 스레드에서 온전히 일어나는 네이티브 뷰는 버벅임이 나타나지 않는다.
+
+⇒ UI 스레드에서만 작동하면 문제 없지만 UI스레드와 JS스레드가 브릿지를 통한 통신을 해야할때, 복잡한 로직이라면 UI가 버벅이거나 느려져, 성능이 떨어지는 것이다.
+
+⇒ 따라서 UI 스레드에서만 작동하면 성능이 떨어지지 않고 잘 작동한다는 이야기다.
+
+***비동기 소통이 왜 문제인가 ?**
+
+- 모든 스레드는 브릿지를 통해 전송된다. 비동기 소통이란, 1 ~ 10번의 요청이 있다고 할때, 1번의 요청을 보내고 이 응답이 언제오는지 응답을 기다리지 않고, 계속해서 10번까지의 요청을 보낸다. 이렇게 되면 혼잡해지고 당연히 성능이 떨어지게 된다.
+    
+    ex) 각기 다른 클릭이벤트를 100번 발생 시켰다. 이때 각 이벤트에 대한 정보가 javascript 영역으로 비동기적으로 전송이 되고, 이 전송에 대한 답을 네이티브 영역에서 기다리지 않고 다른 작업을 계속한다. 이렇게 되면 제대로 된 하나의 이벤트에 대한 것이 제대로 표시되지 않은채로 이벤트는 계속해서 일어나게 되고 결국 UI에 문제가 생기게 된다.
+    
+
+간단한 리엑트네이티브 흐름을 단계적으로 봐보자!
+
+1. 우리가 작성한 코드는 metro가 실행되면서 번들된다.
+2. 메인 스레드가 실행되고, 번들된 JS가 로드하기 시작한다.
+3. 로드 후 JS는 앱에 관련된 화면 및 정보를 JSON 형태로 브릿지에 넘긴다.
+4. 브릿지는 shadow thread에 3번에서 받은 것을 넘겨주고, shadow thread에서 Yoga 가 레이아수을 계산하고 그 값을 main thread에 넘기고, main thread는 실제 View를 그린다.
+5. 사용자가 버튼을 클릭하는등 어떤 이벤트를 실행하면, main thread는 브릿지에 전달하며, script가 해당 이벤트를 처리한다.
+6. 변경된 layout을 react가 virtual dom 과 비교해 변경된 부분만 bridge에 넘긴다.
+7. 넘긴 shadow thread에서 다시 계산하여 이를 main thread에 넘기고 이를 main thread가 렌더링 된다.
+
+이 과정이 계속 반복되며 리엑트 네이티브 앱이 작동하는것이다.
+
+그렇다면 이제 리엑트네이티브에서 자체적으로 제공해주는 Animated에 대하여 알아보자. 
+
+### 간단 Animated 사용방법
+
+![스크린샷 2024-03-13 오후 1 16 22](https://github.com/Space-Belt/blockcoaster/assets/82592845/d6fca995-7cfb-4b95-8d9d-00d5299f2b4b)
+
+위 예시는 작은 박스의 너비가 버튼 클릭 시 20 씩 늘어나는 예시다.
+
+1. **useRef** 훅을 사용하여 **Animated.Value** 클래스의 인스턴스를 생성한다.
+    - 이 인스턴스는 컴포넌트의 스타일 속성에 적용되어야 한다.
+2. 일반 **View** 태그가 아닌 **Animated.View** 태그를 사용한다.
+    1. 1번의 인스턴스를 이 컴포넌트의 스타일 속성에 적용.
+3. 버튼이 클릭 될때, 상수를 담기 위해 만든 **tempWidthValue** 에 값을 20씩 더해준다.
+    - 이때, **Animated.timing**으로 **Animated Value**의 값을 **변경**한다.
+    - 즉, **myWidth**의 값을 변경하는것이다.
+        - **toValue** → 이 값으로 변화 시킨다
+        - **duration** → 애니메이션의 지속 시간 설정
+        - **useNativeDriver** → 네이티브(메인 / UI) 스레드 처리 (true) / 자바스크립트 스레드 처리 (false)
+            - 기본적으로 제공 되는 **Animated**는 **transform, opacity, rotate** 같이 **레이아웃과 관련없는 스타일**만 네이티브 스레드(네이티브레벨)에서 진행 가능하다. 이 경우에는 **true**
+            - 레이아웃에 영향을 끼치는 **width, paddingLeft** 같은 스타일에는 **false**로 설정해야 한다.
+                - 이때 **JS Thread**와 **UI Thread**가 브릿지를 통해 통신하며 작업을 하게 되는것이다.
+        - **Animated.timing(myWidth,&#123;…&#125;).start()  → .start()**로 애니메이션을 시작한다.
+            - 이 함수에 콜백 함수를 인자로 넣으면 애니메이션 종료 시 호출된다.
+
+위 **Animated**를 사용할 때는 UI 스레드에서만 작업될 것을 `useNativeDriver=true` 로 하는데, **Animated**는 레이아웃에 영향을 미치는것에 애니메이션 작업을 할 경우 false 값이 들어간다.
+
+따라서 작업이 복잡해지거나, 너무 많아지면 JS 스레드와 UI 스레드가 통신하면서 비동기적으로 처리 되기에 1프레임을 16.67ms 내에 진행하지 못하게 되고, 16.67ms 를 넘어가면서 **FrameDrop** 이 발생하고 사용자 경험이 낮아지는 결과를 초래할 가능성이 높아지게 되는것이다.
+
+위의 문제를 해결하기 위해 **Reanimated** 가 등장하게 된것이다.
+
+**Reanimated** 는 애니메이션 관련된 모든것들을 **JS thread**와 소통하는 방식이 아닌 **UI thread**에서만 작업하고 화면에 그려내기에, 프레임드롭, 병목현상과 같은 현상을 차단하여, 성능좋은 애니메이션을 구현할 수 있도록 해주는 아주 좋은 라이브러리다!
+
+그렇다면 Reanimated의 어떤 것이 이런 문제를 해결해주는것일까??
+
+1. **Worklet**
+    - worklet은 자바스크립트 함수고, UI thread안에서 독립적인 context로 동작합니다.
+        
+        → 자바스크립트 함수지만 UI thread 안에서 작동!
+        
+    - 이 자바스크립트 함수는 JS thread에서 Parameter(인자)를 받을 수 있고, 함수 내부에서 JS Thread의 상수에도 접근이 가능하다!
+    - 함수 사용을 위해서는 함수 첫 줄에 worklet를 추가하기만 하면 된다.
+
+⇒ UI 스레드 내부에서 실행시킬 자바스크립트 코드를 정의하는 것이다. (ex -  View Property 업데이트 또는 이벤트 반응할때 )
+
+1. **SharedValue**
+    - UI 스레드와 JS 스레드 양측 모두에서 읽고 수정 가능한 값이다. (mutable)
+    - 이 값을 통해 애니메이션을 실행할 때 활용이 가능한것이다.
+    - 두 스레드 모두 값에 접근 가능하지만 업데이트 과정이 다르다.
+        - 애니메이션 관련 업데이트는 거진 UI 스레드에서 작동하기에 sharedValue는 UI 스레드에서 활용가능하게 최적화 되어있으며, UI 스레드에서 sharedValue의 읽고 쓰기는 동기적으로 실행된다.
+        - 따라서 worklet 함수에서 값 업데이트 시 호출 후 바로 값 업데이트!!
+        - 하지만 JS 스레드에서 sharedValue 업데이트는 비동기로 이루어지기에, 업데이트가 즉시 실행 되지 않기에 **Reanimated** 코어가 UI 스레드에서 수행될수 있게 예약해서 동시 문제를 해결한다.
+        - JS 스레드에서 sharedValue 값 업데이트는 react의 setState와 동일하게 진행된다.
+
+그럼 이제 Reanimated의 간단한 사용 예제를 보자!
+
+![스크린샷 2024-03-13 오후 1 16 22](https://github.com/Space-Belt/blockcoaster/assets/82592845/e2bb9d3f-4de7-4e61-a669-0c1c091c6d62)
+
+1. useSharedValue를 사용하여 SharedValue 를 설정해준다.
+2. handleStretchOnClick 이 실행될때 sharedValue를 변경해준다.
+3. useAnimatedStyle(hook)을 통해 sharedValue로 애니메이션을 구현하도록 해준다.
+    1. animatedStyle은 sharedValue값이 업데이트 될때마다 useEffect같이 함께 업데이트 된다.
+    2. []  디펜던시를 사용하여 정말 useEffect와 비슷하게 특정 업데이트를 구현할 수도 있다.
+4. useAnimatedStyle을 할당해준 stretchAnimatedStyle을 애니메이션을 적용할 컴포넌트의 style에 적용해준다.
+
+이렇게 하면 Animated를 사용했을때 레이아웃을 변경하는 width와 같은 속성들을 **`useNativeDriver=false` 로 인해** JS 스레드와 UI 스레드가 통신하며 발생하는 문제가 발생하지 않고 UI 스레드에서 애니메이션에 관련된 로직을 수행하기에, 성능 좋은 애니메이션을 구현할 수 있게 되는것이다!!
+
+이번 포스팅에서 리엑트네이티브의 작동과정을 알아보았고, 왜 Reanimated를 사용해야하는가에 대하여 알아보았다.
+
+Reanimated를 계속해서 경험해보면서,  withTiming / withSpring / interpolate 와 같은 여러가지 다양한 메소드 들을 추가적으로 포스팅 해보도록 하겠다. 
+
+다양한 애니메이션을 많이 구현해봐야겠다. 포스팅 끝!
+
+
+
+
+---
+참고 
+
+- https://sangwonny.tistory.com/44
+- [https://medium.com/crossplatformkorea/원리와-예제를-통해-react-native-reanimated-v2-입문하기-336e832f6ed6](https://medium.com/crossplatformkorea/%EC%9B%90%EB%A6%AC%EC%99%80-%EC%98%88%EC%A0%9C%EB%A5%BC-%ED%86%B5%ED%95%B4-react-native-reanimated-v2-%EC%9E%85%EB%AC%B8%ED%95%98%EA%B8%B0-336e832f6ed6)

@@ -1,0 +1,281 @@
+---
+title: "[RN] FCM 푸시알림 (IOS 편)"
+description: "IOS 에서의 FCM 푸시알림을 기록한다!"
+date: "2024-10-22"
+tags: ["FCM","reactnative"]
+---
+
+> 프로젝트 진행 중  푸시알림을 넣는 기획을 추가했고, 따라서 Firebase의 FCM 토큰을 이용한 방식으로 진행하게 됐다. 전 회사에 재직 중 FCM 토큰을 넣어야 했기에 한번 적용했지만, 시간이 좀 흘렀고 기억이 잘 나지 않았기에 이번엔 기록으로 남겨 놓으려 한다.
+> 
+
+---
+### FCM 이 무엇인지 알아보고 시작하자.
+
+**Firebase Cloud Messaging (FCM)**은 Google에서 제공하는 크로스 플랫폼 메시징 솔루션이다. FCM을 통해 개발자는 안드로이드, iOS, 웹 등 다양한 플랫폼의 사용자에게 무료로 알림 메시지를 전송할 수 있게 해주는 역할을 한다.
+
+**FCM 토큰**은 유저의 각 디바이스를 고유하게 식별하는 문자열이다. 앱이 시작될 때, 이 문자열을 Firebase 서버로부터 발급받아, 후에 푸시 알림을 전송할 때 전달할 주소처럼 사용 되는것이다.
+
+---
+
+### 작동 과정
+
+1. **유저의 디바이스**
+2. **유저의 디바이스에서 앱을 시작합니다.**
+    - 앱을 실행하면, 각 **디바이스의 고유 식별 문자열인 FCM 토큰**을 **FCM 서버**와 연결해 고유한 토큰을 발급받는다.
+    - **발급된 토큰을 백엔드 서버에 저장**합니다.
+    - 또한, 메시지를 받을 리스너를 등록해줍니다.
+3. **관리자가 보낼 메시지 ( 제목, 내용, 이미지 URL 등)** 를 FCM 서버로 전송합니다. **또는 유저의 어떤 행동 ( 제품 구매 등의 행동 ) 에 따라서도 메시지를 전달하여 보낼 수 있습니다.**
+    - 작성한 메시지와 보낼 디바이스의 FCM 토큰을 FCM 서버로 전송!!
+4. **FCM 서버는 메시지를 처리합니다.**
+    - FCM 서버는 메시지와, 해당 FCM 토큰과 연결된 디바이스로 메시지를 전달합니다.
+5. **FCM 토큰을 등록하며 동시에 리스너를 등록했기에, 이 리스너는 메시지를 받아, 알림을 유저의 디바이스에 띄워 줍니다.**
+
+---
+
+## IOS Apple Developer 설정
+
+### 1. 애플 개발자에서 push notification을 위한 CertificateSigningRequest.certSigningRequest 를 발급받자.
+
+1. `cmd + space` 를 통해 키체인접근을 켠다.
+2. 키체인 접근을 켰다면 인증서 지원에서 '인증서 기관에서 인증서 요청' 을 클릭한다.
+
+	![image](https://velog.velcdn.com/images/spacebelt/post/adcc8206-02c0-4c68-9e00-e28814ad7ff7/image.png)
+3. 이메일주소, 이름 을 입력하고 사진과 같이 체크한 후 계속을 클릭하면 저장이 가능하다.
+
+	![image](https://velog.velcdn.com/images/spacebelt/post/54e3c7fc-7ae3-44a6-be29-4beeea5515e0/image.png)
+
+
+### 2. 애플 개발자로 들어가 사진의 인증서,ID 및 프로파일의 키를 클릭 > Key 옆의 (+) 를 클릭한다.
+
+![image](https://velog.velcdn.com/images/spacebelt/post/8a074a5e-62fe-4158-ac44-518faeef0c03/image.png)
+
+### 3. Key Name과 Apple Push Notification service를 체크하고 Continue를 클릭한다.
+![image](https://velog.velcdn.com/images/spacebelt/post/6f68df62-5591-4dc1-a540-490aadb60d2a/image.png)
+
+### 4. 계속 해서 진행하면 여기서 Download를 클릭하여 저장하도록 한다. 
+![image](https://velog.velcdn.com/images/spacebelt/post/9e46161e-b25a-4b6e-969c-935fe054d114/image.png)
+
+- 사진상 Name 밑에 **Key Id** 가 있는데, 이 값은 메모장 같은곳에 저장해놓도록 한다.
+- 인증키는 최초 한 번만 다운로드 가능하기에, 소중히 다뤄주도록 해야한다!
+- DownLoad를 클릭하면 **AuthKey_???.p8** 파일이  다운로드 된다. 
+
+### 5. 이제 Identifiers (식별자) 페이지로 이동하여, 설정할 APP ID를 클릭한다. 없다면 Identifiers 옆의(+) 를 클릭하여 등록하도록 하자.
+
+### 6. 있던 APP ID가 있어서 클릭했다면, 아래와 같이 체크 해주고 Configure을 클릭하여 등록해야한다.
+
+![image](https://velog.velcdn.com/images/spacebelt/post/7b8ca470-f69c-4209-87ad-398c04f7080e/image.png)
+
+- 내가 캡쳐한 사진은 이미 등록이 되어있어, Certificates(2) 로 되어있지만 등록하지 않았다면 0 으로 표시된다.
+- 즉, 아직 등록하지 않았다면 Edit위치의 Configure 버튼을 클릭한다.
+
+### 7. Creat Certificate를 클릭하여 아까 발급받은 파일을 등록한다.
+
+![image](https://velog.velcdn.com/images/spacebelt/post/077d31a0-9f20-481f-8608-186ddd336229/image.png)
+
+- Create Certificate 를 클릭하여, 아까 발급받은 `CertificateSigningRequest.certSigningRequest` 파일을 넣어서 등록해준다.
+- 등록을 했다면 Download your certificate 옆 Download를 해준다.
+- 두가지 다 Download 해놓는다.
+
+---
+
+## Firebase 설정
+
+### 1. Firebase에 로그인하여 콘솔으로 들어가서 프로젝트를 생성해줍니다.
+
+### 2. IOS+ 를 클릭하여 애플앱에 Firebase를 추가해줍니다.
+
+![image](https://github.com/user-attachments/assets/c2a150e4-148a-487e-9f24-983666ab0b48)
+
+### 3. 알맞게 값을 입력하여 앱 등록을 해줍니다.
+
+![image](https://github.com/user-attachments/assets/6f1529a0-536b-43aa-8466-c58472f90f6f)
+
+### 4. 구성 파일 다운로드
+
+![image](https://github.com/user-attachments/assets/0cfb833e-b6a8-4c79-9adf-211ac7f3eacc)
+
+- GoogleService-Info.plist를 다운받습니다.
+- XCode를 실행하고 사진과 같이, 해당 파일을 추가해줍니다.
+- 파일 추가 시 복사하여 넣는 선택지를 체크하지 않고 넣을 경우, 원본을 삭제하면 XCODE에 들어간 GoogleService-Info.plist도 없어지니 유의해주시길 바랍니다.
+
+### 5. 그 다음 Firebase SDK 추가 부분은 우리가 설치할 react-native-firebase/app 라이브러리가 해당 역할을 해주기에 별도의 설정을 하지 않습니다.
+- 이 설정을 진행할 경우 앱이 빌드가 되지 않으므로 주의 하시길 바랍니다.
+
+### 6. 해당 코드를 추가해주어야 합니다.
+
+![image](https://github.com/user-attachments/assets/de930883-7873-4fca-b25e-7a5ae88a9472)
+
+- 저희는 React Native를 사용하기에 `AppDelegate.mm` 파일에 적용해줍니다.
+  ```jsx
+  #import "AppDelegate.h"
+  // 이 밑에 추가합니다
+  #import <Firebase.h>
+  /** 기존 코드 유지 */
+
+  - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
+  {
+    /** 코드 추가 */
+    NSString *filePath = [[NSBundle mainBundle] pathForResource:@"GoogleService-Info" ofType:@"plist"];
+    FIROptions *options = [[FIROptions alloc] initWithContentsOfFile:filePath];
+    [FIRApp configureWithOptions:options];
+    // [FIRApp configure];
+    /** 기존 코드 유지 */
+  }
+
+  ```
+- 사진에서의 코드만 추가했을시에 빌드가 제대로 작동하지 않았기에, 검색을 통해 `GoogleSercive-Info`를 참조하게 하는 코드와 FIROption을 받아 초기화하는 코드를 추가해줬습니다.
+
+### 7. 등록을 마치면 프로젝트 개요에서 프로젝트 설정으로 간후, 클라우드 메시징 탭을 클릭합니다.
+
+![image](https://github.com/user-attachments/assets/2facdfc6-ae58-4306-b638-3e39c84819a8)
+
+### 8. APN 인증키가 없습니다 기준 오른쪽 업로드를 클릭합니다.
+
+![image](https://github.com/user-attachments/assets/5d638161-d925-4932-9975-697a200a8e50)
+
+- APNs 인증 키를 등록해줘야합니다. 
+- Apple Developer에서 설정 4번에서 다운로드 받은 **AuthKey_???.p8** 파일을 업로드 해준다.
+- **키 ID** 또한 4번에서 받은 **Key Id** 를 입력해줍니다.
+- **Team Id** 는 &lt;u&gt;[링크](https://developer.apple.com/account)&lt;/u&gt; 에  접속하여 아래 **멤버십 세부사항** 에 있는 **Team Id** 를 입력해주면 됩니다.
+
+---
+## XCODE에서의 설정
+
+1. Targets의 Signing & Capabilities에서 [+Capability] 를 클릭하여 **push notification** 을 클릭하여 추가해주고, **Background modes** 또한 검색해서 추가해준다. 
+
+	![image](https://velog.velcdn.com/images/spacebelt/post/6ef102a5-d654-4eb5-8fce-aacd6cfef373/image.png)
+
+2. Background Modes의 Remote notifications를 체크해준다.
+
+	![image](https://velog.velcdn.com/images/spacebelt/post/fcb3784b-ea8d-4f7f-9c9f-5406cd903b23/image.png)
+
+---
+
+### RN 디바이스에서의 적용
+
+**필요한 라이브러리**
+
+1. `yarn add react-native-firebase/app`
+    - Firebase 서비스를 RN 앱에 연결하며, Firebase서비스 모듈의 기반 입니다.
+2. `yarn add react-native-firebase/messaging`
+    - 푸시 알림을 보내고 받는 기능을 제공하며, Foreground / Background 환경에서의 메시지 처리 & 서버 - 디바이스, 디바이스 - 디바이스 간 통신역할을 해줍니다.
+3. `yarn add notifee/react-native`
+    - 서버에서 받은 메시지를 알림을 보내줍니다.
+
+### 적용
+
+### 1. FCM 토큰 받기
+
+```jsx
+const getFcmToken = async () => {
+  try {
+    const authStatus = await messaging().requestPermission();
+    const enabled =
+      authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
+      authStatus === messaging.AuthorizationStatus.PROVISIONAL;
+    if (!enabled) {
+      return;
+    }
+
+    const fcmTokenInfo = await firebase.messaging().getToken();
+
+    await fcmTokenUploadController(fcmTokenInfo);
+    setFcmToken(fcmTokenInfo);
+  } catch (err) {
+    console.log(err);
+  }
+};
+```
+
+- IOS 에서는 유저가 알림을 허용해야 FCM 토큰을 받아올 수 있기에 `messaging().requestPermission();` 를 사용해 유저에게 허가를 받은후에 **fcmToken**을 받아와야한다.
+- 유저가 허용했다면 `firebase.messaging().getToken()` 를 통해 토큰을 받아온 후 백엔드에 저장한다.
+- App.js 등 최상위에서 진행하는것을 추천한다.
+
+### 2. FCM 토큰 수신 후 리스너를 적용해줘야한다.
+
+```jsx
+ React.useEffect(() => {
+  getFcmToken();
+  const unsubscribe = messaging().onMessage(async message => {
+    await onMessageReceived(message);
+  }); 
+  messaging().setBackgroundMessageHandler(async message =>
+    await onMessageReceived(message),
+  ); 
+  return () => {
+    console.log('[-] FCM 메시지 리스너가 사라졌습니다!');
+    unsubscribe();
+  };
+}, []);
+```
+
+- 앱이 켜지고 랜더링 되면 1번이 실행되어 FCM token을 받아온다.
+- 토큰을 받아서 저장했다면, ForeGround일때 FCM 메시지를 수신하는 리스너를 등록해준다.
+    - `const unsubscribe = messaging().onMessage(async message => &#123;
+        await onMessageReceived(message);
+    &#125;);`
+    - message ⇒ 수신된 메시지 데이터입니다. 이 메시지를 받으먼 `onMessageReceived(message)` 를 작동합니다. 이 함수는 3번에서 설명하겠습니다.
+- BackGround에서 FCM 메시지를 수신해주는 리스너도 등록하여, 앱이 꺼져있어도 백그라운드에서 받을 수 있도록 적용해줍니다.
+    - `messaging().setBackgroundMessageHandler(async message =>
+        await onMessageReceived(message),
+    );`
+    - ForeGround와 같이 messaging의 setBackgroundMessageHandler 메소드를 통해 진행합니다.
+- 이 `useEffect훅` 은 최상위 컴포넌트에서 작동하기에, 이 컴포넌트가 unmount 되면 unsubscribe 에 할당한 Foreground 메시지 리스너를 해제해주어, 메모리 누수를 방지해줍니다.
+
+### 3. 수신된 메시지를 띄워주는 함수
+
+```jsx
+const onMessageReceived = async (
+  message: FirebaseMessagingTypes.RemoteMessage,
+) => {
+
+  // 디바이스에 알림을 표시합니다.
+  await notifee.displayNotification({
+    title: message.notification!.title,
+    body: message.notification!.body,
+  });
+};
+```
+
+- 2번 에서 등록한 리스너에서 받은 메시지를 띄워주는 함수입니다
+- 안드로이드는 별도의 처리가 필요하나, 이 부분은 android 적용 블로그를 작성할때, 작성하도록 하겠습니다.
+- `notifee` 의 `displayNotification` 메소드를 사용하여, 전달받은 매개변수인 FCM 메시지를 title과 body에 할당하여, 알림을 띄워줍니다.
+
+---
+
+> 위의 과정을 다 진행했다면, message를 FCM 서버와 통신하여 메시지를 전송하면 푸시알림이 진행되는것을 확인해 볼수 있다.
+이 포스팅에서는 Firebase에서 테스트를 통해 푸시알림을 날려 확인하는 것으로 포스팅을 마무리 하도록 하겠다.
+
+
+1) 사진과 같이 Messaging을 클릭하고 만들기를 클릭한다.
+
+![image](https://velog.velcdn.com/images/spacebelt/post/1a27fc67-6583-4afc-9ac6-1531d202865c/image.png)
+
+
+2) 입력하고 싶은 값을 입력하고, 테스트 메시지 전송을 클릭한다.
+
+![image](https://velog.velcdn.com/images/spacebelt/post/30ad3674-49c7-4bc1-9237-aa0723a9b0be/image.png)
+
+
+- RN 디바이스에서 적용의 1번에서 토큰을 발급 받았을것이다. 
+- 테스트 메시지 전송을 클릭하면 **기기에서 테스트** 모달이 나오며, **FCM 등록 토큰 추가** 를 클릭하여 등록 > 등록된 토큰을 체크하여 테스트 클릭을 한다.
+
+
+3) 확인
+
+![image](https://velog.velcdn.com/images/spacebelt/post/33acca13-0084-46e4-9f19-92bc96db4f38/image.png)
+
+
+
+
+
+> 이렇게  IOS 에서 FCM 을 통해 푸시 알림을 구현해봤다. 보통 이 푸시 알림을 클릭하면 앱 내의 어떤 페이지로 이동하게 되는데, 이는 다음 포스팅에서 다뤄보도록 하겠다.
+
+### 그럼 다음엔 안드로이드 적용방법과 딥링크를 다루는 포스팅으로 돌아오도록 하겠습니다! 감사합니다 !!
+
+
+
+
+
+
+

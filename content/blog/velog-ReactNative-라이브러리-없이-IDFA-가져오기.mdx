@@ -1,0 +1,224 @@
+---
+title: "[ReactNative] 라이브러리 없이 IDFA 가져오기"
+description: "[ReactNative] 라이브러리 없이 IDFA 가져오기"
+date: "2024-08-09"
+tags: ["reactnative"]
+---
+
+---
+
+> 언젠가부터 인스타그램, 페이스북 등 어플을 사용하면서 내가 요즘 관심있게 생각하는 분야의 광고만 나에게 노출된다는 것을 알게 되었다. 다들 스마트폰을 사용한다면 이 문구를 보았을것이다. 
+>
+’이 앱이 사용자의 행동을 추적하는데 동의하십니까?’  허용 / 거부
+>
+바로 이를 통해 누군가… 내 행동을 분석 당하고 있었던 것이다. 
+>
+그렇다면 이것이 어떻게 가능한것인지! 
+궁금해서 찾아보았고 이를 설정하는 법을 포스팅 하게 됐다!!
+> 
+
+### **IDFA란?**
+
+#### Apple이 iOS 기기에 할당하는 고유한 식별자
+
+인스타그램이나 페이스북을 사용하면 내가 관심있게 봤던 비슷한 광고들이 계속 노출된다. 이 역할을 해주는 것이 **IDFA (IOS)** 다.  ⇒ 이를 통해 광고주들은 사용자의 앱 광고 반응과 설치 후 활동을 추적 가능하다!
+
+#### 보통 라이브러리를 통해서 IDFA값을 가져오겠지만, 조금 더 발전하는 개발자가 되기 위하여 XCode에서 직접 swift를 건드리며, 가져와 보았다. 그럼 이제부터 어떻게 했는지 알아보자!!
+
+
+
+
+### 1. 먼저, 유저에게 노출되는 ‘이 앱이 사용자의 행동을 추적하는데 동의하십니까?’  즉, 권한을 허용해주는 문구를 Info.plist에 추가하자
+
+```jsx
+<key>NSUserTrackingUsageDescription</key>
+<string>이 앱은 광고 목적으로 사용자 활동 추적을 허용하시겠습니까?</string>
+```
+
+- Key 값은 어떤 권한을 물어볼지에 대한 설명이며, 딱 봐도 알수 있듯, string태그 안의 Value(문구)는 들어갈 내용이다!
+
+
+
+
+### 2. 그럼 이번엔 Swift 코드로 1번에서 설정한 권한을 요청하고, 허용 시 IDFA를 가져오는 코드를 알아보자
+
+먼저, 파일 생성 방법 보고 코드를 보자!
+
+1) Swift 파일을 생성
+
+Xcode → 본인 프로젝트 선택(마우스 오른쪽 클릭) → File → New → File 선택
+
+Swift File 선택 후 이름을 설정 해준다. 
+
+나는 IDFAModule 라 해줬다. 그럼 이제 아래 코드를 보자!
+
+```jsx
+import Foundation
+import AppTrackingTransparency
+import AdSupport
+
+@objc(IDFAModule)
+class IDFAModule: NSObject {
+
+  @objc
+  func getIDFA(_ resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+    requestIDFAPermission { idfa in
+      if let idfa = idfa {
+        resolve(idfa)
+      } else {
+        let error = NSError(domain: "", code: 200, userInfo: nil)
+        reject("no_idfa", "IDFA not available", error)
+      }
+    }
+  }
+
+  private func requestIDFAPermission(completion: @escaping (String?) -> Void) {
+    if #available(iOS 14, *) {
+        ATTrackingManager.requestTrackingAuthorization { status in
+            switch status {
+            case .authorized:
+                let idfa = ASIdentifierManager.shared().advertisingIdentifier.uuidString
+                completion(idfa)
+            case .denied, .restricted, .notDetermined:
+                completion(nil)
+            @unknown default:
+                completion(nil)
+            }
+        }
+    } else {
+        if ASIdentifierManager.shared().isAdvertisingTrackingEnabled {
+            let idfa = ASIdentifierManager.shared().advertisingIdentifier.uuidString
+            completion(idfa)
+        } else {
+            completion(nil)
+        }
+    }
+  }
+}
+```
+
+- Native 모듈에서 사용할 AppTrackingTransparency를 임포트 해준다! 당연 이 앱을 추적하는 모듈이다!
+- `@objc` 는 Swift 코드를 Objectice-C 코드에서 사용할 수 있도록 해주는것이다.
+    - 이는 Swift 코드를 Objective-C 런타임에서 인식할 수 있게 해주기 위해서다.
+    - 상세 설명
+        - RN은 Objective-C로 작성된 네이티브 모듈과 상호작용할 수 있게 설계됐다. Swift로 작성된 코드를 RN에서 사용하려면 `@objc` 를 사용해 해당 메서드를 Objective-C 런타임에 노출 시켜야한다.
+        - 이렇게 해야 JavaScript에서 Swift로 작성된 네이티브 모듈을 호출할 수 있게 된다.
+- requestIDFAPermission 함수를 잘 보면, if문에서 iOS 14 이상 버전과 그 이하로 나누어 진다.
+    - 14 이상일 경우
+        - **ATTrackingManager** 를 사용해 추적 권한을 요청하고, 권한 승인여부에 따라 `completion` 에 담아 전달한다고 보면 된다.
+    - 미만일 경우
+        - **ASIdentifierManager** 를 사용하여 그냥 IDFA를 가져와 completion에 담아 전달한다고 보면 된다.
+- **getIDFA** 함수는 **requestIDFAPermission** 를 사용하여 IDFA를 가져왔을시에는 resolve로 반환 / 실패시 reject로 오류를 전달한다! ****
+- 하지만 이것만 해주면 `Cannot find type 'RCTPromiseRejectBlock' in scope / Cannot find type 'RCTPromiseResolveBlock' in scope` 와 같은 오류를 볼 수 있다.
+- 이는 Swift코드에서 `RCTPromiseRejectBlock` 와 `RCTPromiseResolveBlock` 를 찾을 수 없다는 뜻이다.
+    - 왜 그럴까? 이는 아직 Swift가 Objective-C로 만들어진 iOS의 Objective-C API를 호출하지 못해서 그렇다. 그럼 다음 단계에서 해결해보자!
+
+
+
+
+### 3. 그 다음은, Swift에서 Objective-C로 작성된 라이브러리에 접근 할 수 있게 하며, Swift에서 ReactNative모듈을 또는 그 반대로도 사용 가능하게끔 해주는 역할을 하도록 해주는 일을 진행한다!
+
+> 위에서 발생한 오류는 React Native의 헤더 파일이 제대로 연결되지 않았기 때문에 발생했다. 따라서 브릿지 헤더 파일을 설정해줘야 한다.
+> 
+
+#### 생성 방법!
+
+1) XCode에서 위 2번에서 했듯 파일을 생성한다. 이때는 Header File을 선택하여 진행해야 한다.
+
+2) 파일 이름 → `[프로젝트이름]-Bridging-Header.h` 로 지정한다.
+
+3) 헤더 파일에 아래 코드를 임포트 해준다!!
+
+```jsx
+#import <React/RCTBridgeModule.h>
+```
+
+이제 만든 브리지 헤더 파일을 연결해주자
+
+5) Xcode에서 내 프로젝트를 선택하고 ‘Build Settings’ 를 선택한다. 그리고 ‘Objective-C Bridging Header’ 를 찾아간다. 여기서 프로젝트위치 기준으로 `[내프로젝트명]/[내프로젝트명]-Bridging-Header.h` 를 입력하여 연결해준다.
+
+6) 위 과정들을 통해 Swift와 Objective-C로 만들어진 iOS 라이브러리들을 사용할 수 있고, React Native에서 이를 호출하여 사용할 수 있게 한것이다.
+
+#### 여기서 중요한 것 정확히 분류, 정리
+Swift와 Objective-C간의 상호작용을 이루어내는것은 `[내프로젝트명]/[내프로젝트명]-Bridging-Header.h` 파일은 만들었기에 가능한것이고, `#import &lt;React/RCTBridgeModule.h&gt;` 는 브릿지 헤더를 통해 iOS 라이브러리를 사용할 수 있게된 Swift 코드를 Swift에서 ReactNative에서 사용할수 있는 모듈로 만들기 위한 `RCTBridgeModule` 란 프로토콜을 Swift코드에서 사용할 수 있게 해준것이다. 즉, 이것만으로는 아직 Swift 모듈을 React Native와 연결해서 JavaScript에서 호출해 사용할 수는 없다는것이다!!!!!! ㅠㅠ
+
+
+
+
+
+### 4. 이제, 정말 ReactNative의 JavaScript에서 이 코드를 호출하여 사용할 수 있게 하는 과정이다. Objective-C 파일로 모듈을 등록하자!!!!!!
+
+#### 생성 방법
+
+1) XCode위에서 했던것 처럼 파일을 생성하는데 ‘Objective-C’ 파일 을 선택해서 생성한다.
+
+2) 코드 작성
+
+```objectivec
+#import <React/RCTBridgeModule.h>
+
+@interface RCT_EXTERN_MODULE(IDFAModule, NSObject)
+
+RCT_EXTERN_METHOD(getIDFA:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject)
+
+@end
+```
+
+- 여기서 왜 또 `RCTBridgeModule.h` 를 임포트를 하는가!!!???
+    - 3번에서 `RCTBridgeModule` 의 역할은 ReactNative 에서 사용할 수 있도록 Swift파일을 모듈로 만들기 위한 프로토콜을 위해 임포트했다.
+    - 이 Objective-C 파일에서의 `RCTBridgeModule` 는 Swift 로 작성된 모듈을 React Native에 등록하기 위함이다! 즉, Swift 모듈을 React Native와 진짜 연결해주는 것이다.
+- `@interface RCT_EXTERN_MODULE(IDFAModule, NSObject)`
+    - `@interface` : Objective-C에서 클래스를 정의할 때 사용하는 키워드
+    - `RCT_EXTERN_MODULE`: Swift 클래스를 React Native 모듈로 등록한다. 이 매크로는 Swift 클래스가 JavaScript에서 인식될 수 있도록 한다!!
+    - **IDFAModule**: Swift에서 작성한 클래스 이름이다.
+    - **NSObject**: Objective-C의 기본 클래스다.
+- `RCT_EXTERN_METHOD(getIDFA:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject)`
+    - `RCT_EXTERN_METHOD`: Swift 클래스의 특정 메서드를 JavaScript에서 호출할 수 있도록 노출한다. 이 매크로는 JavaScript에서 해당 메서드를 사용할 수 있게 한다.
+    - **`getIDFA`** 메서드를 JavaScript에서 호출할 수 있도록 노출한다.
+    - **resolve**와 **reject**는 JavaScript Promise와 연결되어, 메서드 실행 결과를 반환하거나 오류를 전달한다.
+
+#### 이 과정을 통해, 이제 진짜 ReactNative Javascript에서 Swift 모듈을 호출하여 사용할 수 있게 된것이다!!
+
+### 5. ReactNative 코드에서 실제로 사용해보자 !!!!!
+
+```objectivec
+import {NativeModules} from 'react-native';
+
+const HomeScreen = () => {
+	const {IDFAModule} = NativeModules;
+	
+	useEffect(() => {
+    IDFAModule.getIDFA()
+      .then(idfa => {
+        console.log('IDFA: ', idfa);
+      })
+      .catch(error => {
+        console.error(error);
+      });
+  }, []);
+	
+	
+	return (
+		<View>
+			<Text>홈스크린</Text>
+		</View>
+	)
+}
+```
+
+- NativeModules를 임포트하고 IDFAModule을 구조 분해 할당 ****하여 가져온 다음, getIDFA 를 사용한다!!!!!!!!
+
+### 결과
+
+![image](https://github.com/user-attachments/assets/72ffcb79-9ed6-48ba-b608-d3a66b0aaa13)
+
+---
+
+### 요약
+
+1. Swift 코드로 Objective-C로 만들어진 iOS 라이브러리를 사용하는 코드를 작성한다.
+2. Swift 코드는 React Native에서 직접 이해할 수 없으므로 `@objc`를 통해 Objective-C 런타임 환경에서 상호작용할 수 있게 만든다. 
+3. 그러나 이 작업만으로는 Swift 코드가 iOS 라이브러리에 접근할 수 없기 때문에 브리지 헤더를 생성해준다.
+4. 이 브리지 헤더 파일 내에 Swift 코드를 React Native에 모듈로 만들어줄 수 있는 프로토콜인 `RCTBridgeModule.h`를 임포트하여 React Native에 모듈로 등록할 수 있는 기반을 다진다.
+5. swift로 작성한 모듈을 ReactNative에 노출하기 위해 `RCTBridgeModule` / **`RCT_EXTERN_MODULE`** 메크로를 사용해 모듈에 진짜 등록하고, 호출될 수 있도록 해준다.
+6. RN에서 `import &#123;NativeModules&#125; from 'react-native';` 하여 사용한다.

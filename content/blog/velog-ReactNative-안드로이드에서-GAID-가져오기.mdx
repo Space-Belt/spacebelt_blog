@@ -1,0 +1,317 @@
+---
+title: "[ReactNative] 안드로이드에서 GAID 가져오기"
+description: "안드로이드에서 GAID 가져오기"
+date: "2024-08-09"
+tags: ["kotlin","reactnative"]
+---
+
+> ### 이전에는 IOS에서 GAID를 가져오는 포스팅을 했다. 그렇다면 안드로이드에서는 어떻게 가져오는지 알아보자!!!
+>
+### 어떻게 만들었고 그 과정을 하나 하나 보며, 알아가보자.
+
+
+## 1. Android의 네이티브 기능을 JavaScript에서 사용할 수 있도록 브릿지 역할을 해주는 Native Module을 작성해주자. ( 이 파일은 GAID를 가져오는 로직과, ReactNative의 JavaScript 코드에서 호출할 수 있는 메서드를 정의한다 )
+
+> 코드에 달린 번호로 한줄 한줄 역할을 설명하도록 하겠다!
+> 
+
+#### **GaidModule.kt 생성**
+
+- [프로젝트루트]/android/app/src/main/java/com/[본인프로젝트] 경로에 생성했다.
+
+```kotlin
+package com.yourapp 
+
+import android.content.Context
+import com.facebook.react.bridge.ReactApplicationContext
+import com.facebook.react.bridge.ReactContextBaseJavaModule
+import com.facebook.react.bridge.ReactMethod
+import com.facebook.react.bridge.Promise
+import com.google.android.gms.ads.identifier.AdvertisingIdClient
+
+1. class GaidModule(reactContext: ReactApplicationContext) 
+									: ReactContextBaseJavaModule(reactContext) {
+
+    2. override fun getName(): String {
+        return "GaidModule"
+    }
+
+    3. @ReactMethod
+    fun getGaid(promise: Promise) {
+        Thread {
+            try {
+                val context: Context = reactApplicationContext
+                val adInfo = AdvertisingIdClient.getAdvertisingIdInfo(context) 
+                val id = adInfo.id 
+                promise.resolve(id) 
+            } catch (e: Exception) {
+                promise.reject("Error", e)
+            }
+        }.start()
+    }
+}
+```
+
+#### 먼저 임포트한 것들의 역할과 용어를 알아보고 한줄 한줄 알아보도록 하자!
+
+| 이름 | 역할 |
+| --- | --- |
+| Context | Android의 Context 클래스는 애플리케이션 환경에 대한 글로벌 정보를 제공한다. 네이티브 모듈에서 애플리케이션 컨텍스트를 가져오거나 사용할 때 필요하다. |
+| ReactApplicationContext | 네이티브 모듈이 React Native 애플리케이션과 상호작용할 수 있게 한다. |
+| ReactContextBaseJavaModule | 네이티브 모듈을 작성할 때 상속받는 기본 클래스다. 이 클래스는 React Native와의 통신을 위한 기본 기능을 제공한다. |
+| ReactMethod | 네이티브 모듈의 메서드를 JavaScript에 노출하기 위해 사용된다. 이 어노테이션(@ReactMethod)이 붙은 메서드는 JavaScript에서 호출할 수 있다. |
+| Promise | Promise 클래스는 비동기 작업의 결과를 JavaScript로 반환하기 위해 사용된다. 성공 시 resolve 메서드를 호출하고, 실패 시 reject 메서드를 호출한다 |
+
+> **어플리케이션의 컨텍스트(Context)** 
+>
+안드로이드 애플리케이션 개발에서 매우 중요한 개념. Context는 애플리케이션의 현재 상태와 환경에 대한 전역 정보를 제공하며, 이를 통해 시스템 서비스에 접근하거나 리소스, 데이터베이등을 사용할 수 있게 한다.  우리가 React로 개발할때 Context 처럼 상태를 전역적으로 접근할수 있는것과 비슷한 개념으로 보인다.
+> 
+
+### 1)
+
+- **class GaidModule:** **`GaidModule`** 클래스 이름 설정
+
+- **(reactContext: ReactApplicationContext):** 생성자는 **`ReactApplicationContext`**를 매개변수로 받아 초기화한다. 이 컨텍스트로 안드로이드 네이티브 모듈이 React Native 애플리케이션과 상호작용할 수 있게 한다.
+- ReactContextBaseJavaModule(reactContext): **`ReactContextBaseJavaModule`** 클래스를 상속받아 네이티브 모듈로 동작한다. **`reactContext`**를 부모 클래스의 생성자로 전달하여 초기화한다.
+
+### 2)
+
+- **override fun getName(): String:** **`getName`** 메서드는 모듈의 이름("GaidModule")을 정의한다. 이 이름은 JavaScript에서 모듈을 호출할 때 사용된다. 이렇게 정의하면 JavaScript에서 **`NativeModules.GaidModule`**로 모듈을 호출할 수 있다.
+
+### 3)
+
+- **@ReactMethod:** 이 어노테이션은 **`getGaid`** 메서드를 JavaScript에 노출하기 위해 사용된다. 이 어노테이션이 붙은 메서드는 JavaScript에서 호출할 수 있다.
+
+- **fun getGaid(promise: Promise):** **`getGaid`** 메서드는 GAID를 가져오는 비동기 작업을 수행한다. **`Promise`** 객체를 매개변수로 받아 작업의 결과를 JavaScript로 반환한다.
+
+- **Thread &#123; ... &#125;.start():** 새로운 스레드를 생성하여 비동기적으로 GAID를 가져온다. 이 방법을 사용해야, 메인 스레드가 차단되지 않는다.
+
+- **val context: Context = reactApplicationContext:** **`reactApplicationContext`**를 사용하여 애플리케이션 컨텍스트를 가져온다.
+- **val adInfo = AdvertisingIdClient.getAdvertisingIdInfo(context):** **`AdvertisingIdClient`**를 사용하여 GAID 정보를 가져온다.
+- **val id = adInfo.id:** 기기의 id를 담아준다.
+- **promise.resolve(id):** GAID를 JavaScript로 반환한다.
+- **catch (e: Exception):** 예외가 발생한 경우, **`promise.reject("Error", e)`**를 호출하여 JavaScript로 오류를 반환한다.
+
+---
+
+## 2. 1번 과정으로, ReactNative에서 호출할 수 있는 이름과 메소드를 정의했다. 이제는 이 모듈을 ReactNative에 진짜 등록하여 사용될 수 있도록 해주는 역할을 하는 Package 클래스를 만들어주자!
+
+#### **GaidPackage.kt 1번과 동일한** 경로에 생성했다.
+
+```kotlin
+package com.yourapp
+
+import com.facebook.react.ReactPackage
+import com.facebook.react.bridge.ReactApplicationContext
+import com.facebook.react.bridge.NativeModule
+
+1. class GaidPackage : ReactPackage {
+
+    2. override fun createNativeModules(reactContext: ReactApplicationContext) 
+																							    :List<NativeModule> {
+        return listOf(GaidModule(reactContext))
+    }
+
+}
+```
+
+| 이름 | 역할 |
+| --- | --- |
+| ReactPackage | ReactPackage 인터페이스를 임포트한다. 이 인터페이스는 네이티브 모듈을 React Native에 등록하는 데 사용된다. ReactPackage는 네이티브 모듈과 UI 매니저를 제공하는 역할을 한다. |
+| ReactApplicationContext | ReactApplicationContext 클래스를 임포트한다. 이 클래스는 React Native 애플리케이션의 컨텍스트를 나타낸다 (1번과 동일) |
+| NativeModule | NativeModule 인터페이스를 임포트한다. 이 인터페이스는 네이티브 모듈을 정의하는 데 사용된다. 네이티브 모듈은 JavaScript에서 호출할 수 있는 네이티브 코드를 포함한다. |
+
+### 1)
+
+- **ReactPackage:** **`GaidPackage`** 클래스는 **`ReactPackage`** 인터페이스를 구현한다. 이 클래스는 **`GaidModule`**을 React Native에 등록하는 역할을 한다. **`ReactPackage`** 인터페이스를 구현함으로써, React Native는 이 패키지를 통해 네이티브 모듈을 인식하고 사용할 수 있다.
+
+### 2)
+
+- **`createNativeModules`** 메서드는 **`ReactPackage`** 인터페이스의 메서드를 구현한다. 이 메서드는 네이티브 모듈을 생성하고 이를 리스트로 반환한다. **`reactContext`**는 **`ReactApplicationContext`** 객체로, 네이티브 모듈이 애플리케이션과 상호작용할 수 있게 한다.
+- **`GaidModule`** 인스턴스를 생성하고 이를 리스트에 추가하여 반환한다. **`GaidModule`**은 GAID를 가져오는 네이티브 모듈이다. 이 리스트는 React Native에 의해 사용되어 네이티브 모듈을 등록하고, JavaScript에서 호출할 수 있게 한다.
+
+ React Native는 애플리케이션 초기화 시 모든 패키지를 순회하여 네이티브 모듈을 등록하므로, **`GaidPackage`**를 통해 **`GaidModule`**이 자동으로 등록된다.
+
+## 3. 이제 실제 RN 이 시작될때, 우리가 만든 모듈을 로드할수 있도록 MainApplication.kt 파일을 수정해주자!
+
+> 이왕, 한줄 한줄 모두 이해할겸, 다 분석해놓겠다!
+> 
+
+```kotlin
+package com.yourapp
+
+import android.app.Application
+import com.facebook.react.PackageList
+import com.facebook.react.ReactApplication
+import com.facebook.react.ReactHost
+import com.facebook.react.ReactNativeHost
+import com.facebook.react.ReactPackage
+import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.load
+import com.facebook.react.defaults.DefaultReactHost.getDefaultReactHost
+import com.facebook.react.defaults.DefaultReactNativeHost
+import com.facebook.soloader.SoLoader
+
+1. class MainApplication : Application(), ReactApplication {
+
+  2. override val reactNativeHost: ReactNativeHost =
+      object : DefaultReactNativeHost(this) {
+        3. override fun getPackages(): List<ReactPackage> {
+            val packages = PackageList(this).packages.toMutableList()
+            packages.add(GaidPackage())
+            return packages
+        }
+
+        4. override fun getJSMainModuleName(): String = "index" 
+
+        5. override fun getUseDeveloperSupport(): Boolean = 
+        BuildConfig.DEBUG
+        
+        6. override val isNewArchEnabled: Boolean = 
+        BuildConfig.IS_NEW_ARCHITECTURE_ENABLED
+        
+        7. override val isHermesEnabled: Boolean = 
+        BuildConfig.IS_HERMES_ENABLED 
+      }
+
+  8. override val reactHost: ReactHost
+    get() = getDefaultReactHost(applicationContext, reactNativeHost)
+
+  9. override fun onCreate() {
+    super.onCreate()
+    SoLoader.init(this, false) 
+    if (BuildConfig.IS_NEW_ARCHITECTURE_ENABLED) { 
+      load()
+    }
+  }
+}
+```
+
+| 이름 | 역할 |
+| --- | --- |
+| Application | 애플리케이션의 전역 상태를 관리하며, 애플리케이션이 시작될 때 초기화 작업을 수행하는 데 사용된다. |
+| PackageList | 자동으로 연결된 React Native 패키지 목록을 제공한다. |
+| NativeModule | NativeModule 인터페이스를 임포트한다. 이 인터페이스는 네이티브 모듈을 정의하는 데 사용된다. 네이티브 모듈은 JavaScript에서 호출할 수 있는 네이티브 코드를 포함한다. |
+| ReactApplication | React Native 애플리케이션이다. |
+| ReactHost | React Native의 호스트를 나타내며, 애플리케이션의 네이티브 모듈과 뷰 매니저를 관리한다. |
+| ReactNativeHost | React Native 애플리케이션의 호스트를 정의하며, 패키지 목록과 JavaScript 메인 모듈 이름 등을 설정한다. |
+| ReactPackage | 네이티브 모듈과 뷰 매니저를 제공하는 역할을 한다. |
+| DefaultNewArchitectureEntryPoint.load | 새로운 아키텍처의 네이티브 엔트리 포인트를 로드하는 load 메서드 |
+| DefaultReactHost.getDefaultReactHost | 기본 React 호스트를 가져오는 getDefaultReactHost 메서드 |
+| DefaultReactNativeHost | 기본 React Native 호스트를 제공한다. |
+| SoLoader | 네이티브 라이브러리를 로드하는 데 사용된다. |
+
+### 1)
+
+- **`MainApplication`** 클래스는 **`Application`(어플전역상태를 관리)** 클래스를 상속받고 **`ReactApplication`** 인터페이스를 구현한다. 이를 통해 애플리케이션의 전역 상태를 관리하고, 이 안에 들어갈 내용들로 React Native 애플리케이션을 설정하겠다란걸 의미한다.
+
+### 2)
+
+- **`reactNativeHost`**는 **`ReactNativeHost`** 객체를 오버라이드하여 정의하며, **`DefaultReactNativeHost`**를 사용하여 기본 설정을 제공한다. **`this`**는 현재 애플리케이션 컨텍스트(어플리케이션전역상태) 다.
+    - 즉, ReactNativeHost를 담는 reactNativeHost를 아래의 코드들로 덮어쓸것이고(override), **`DefaultReactNativeHost`** 로 기본 어플리케이션 전역상태를 담아놓는 것을 의미하는것 으로 보인다.
+    
+
+### 3)
+
+- **`getPackages`** 메서드는 **`ReactNativeHost`**의 메서드를 오버라이드하며, 애플리케이션에서 사용할 React Native 패키지 목록을 반환한다.
+    - 여러 모듈들을 담은 패키지 목록을 사용할 수 있게 반환해주는것이다. ( ReactNativeHost는 패키지 목록과 JavaScript 메인 모듈 이름등을 설정하는것이다!!! )
+- `val packages = PackageList(this).packages.toMutableList()`
+    - 자동으로 연결된 패키지 목록을 가져오고, val 로 선언해 변경 가능한 packages로 해준다.
+- `packages.add(GaidPackage())` 자동연결된 패키지에 + 우리가 만든 GaidPackage를 추가해준다, 그리고 이 packages를 리턴해준다!!!
+
+### 4)
+
+- RN JavaScript 의 메인모듈 ( Entry Point ) 이름을 반환하는 `getJSMainModuleName()` 함수며, 보통 index 로 이름을 설정해놓기에 ‘index’다. ( 애플리케이션의 진입점 ! )
+
+### 5)
+
+- 개발자 모드 지원 여부를 반환하는 역할이며, 여기선 **`BuildConfig.DEBUG`**를 사용하여 디버그 모드에서 개발자 옵션을 활성화했다.
+
+### 6)
+
+- RN New Architecture 사용 여부를 설정하는것이며, 그 여부는 **`BuildConfig.IS_NEW_ARCHITECTURE_ENABLED`** 를 통해 전달된다.
+
+### 7)
+
+- 헤르메스 자바스크립트 엔진 사용 할지를 설정하는것이다!
+
+### 8)
+
+- RN 애플리케이션 기본 호스트(구성, 설정)을 반환하는 역할을 하는것이다.
+    - 즉 앱 전역 상태(콘텍스트)와 ReactNative 인스턴스를 관리하고 초기화해서, 앱이 실행될때 필요한 설정과 초기화를 담당해주는 기반을 제공해주는 것이다.
+
+### 9)
+
+- onCreate는 앱이 시작될때 호출되는것이고, 8번의 구성대로 초기화 작업을 하는것이다.
+- `super.onCreate()` 로 부모클래스의 onCreate 메서드를 호출해 기본 초기화 작업을 수행하고
+- `SoLoader.init` 는 안드로이드 앱에서 네이티브 라이브러리를 로드하기 위한 초기화 작업을 한다.
+    - 즉, 네이티브 코드 로더 인것이다!! (앱이 시작될때 필요한 라이브러리 준비 역할)
+    - this는 어플리케이션 객체고, false는  Facebook에서 만든 Android 앱 빌드 시스템(Exopackage - 네이티브 라이브러리와 리소스를 앱 패키지 외부에서 관리하고 로드하는 방법)을 사용하지 않겠다는 것이다.
+- if 문으로 새로운 아키텍쳐 사용 여부를 체크하고, 사용한다면 새로운 아키텍쳐에 맞게 애플리케이션을 초기화 하고, 그게 아니라면 기존 아키텍쳐를 사용한 애플리케이션을 초기화하고 실행하는것이다!
+
+## 위 정리를 좀 더 이해하기 위해 계속 언급되는 호스트에 대해 알아보자.
+
+React Native에서 `ReactHost`와 `ReactNativeHost`는 애플리케이션 인스턴스의 생명 주기와 구성을 관리하는 중요한 구성 요소다. 이들은 React Native가 네이티브 플랫폼(예: Android 또는 iOS)과 통합되는 방식을 관리한다.
+
+### **ReactNativeHost**
+
+### **주요 역할 및 개념**
+
+1. **메인 엔트리 포인트:**
+    - `ReactNativeHost`는 React Native 인스턴스를 생성하고 구성하는 메인 엔트리 포인트다. 이는 JavaScript 엔진과 코드 번들을 로드하고 언로드하는 작업을 관리한다.
+2. **구성(Configuration):**
+    - `ReactNativeHost`를 통해 React 인스턴스를 구성할 수 있다. 여기에는 디버깅 설정, JavaScript 엔진 선택(예: Hermes), 기타 런타임 설정이 포함된다.
+    - 예를 들어, 개발 모드에서는 디버깅을 활성화하고, 프로덕션 모드에서는 최적화된 설정을 사용할 수 있다.
+3. **생명 주기 관리:**
+    - `ReactNativeHost`는 React 인스턴스의 생명 주기를 관리하는 메서드를 제공한다. 이를 통해 React 인스턴스를 로드하거나 다시 로드할 수 있다.
+    - 이는 특히 React Native가 애플리케이션의 일부로 사용될 때 리소스를 효율적으로 관리하는 데 중요하다.
+4. **패키지 관리:**
+    - `ReactNativeHost`는 애플리케이션에서 사용할 네이티브 모듈과 뷰 매니저의 목록을 관리한다. 이를 통해 필요한 모든 네이티브 모듈을 한 곳에서 관리할 수 있다.
+    - 예를 들어, `getPackages` 메서드를 통해 `ReactPackage` 목록을 반환하여 애플리케이션에서 사용할 네이티브 모듈을 등록한다.
+
+### **ReactHost**
+
+### **주요 역할 및 개념**
+
+1. **기본 React 호스트 제공:**
+    - `ReactHost`는 기본 React 호스트를 제공하는 역할을 한다. 이는 `ReactNativeHost`와 유사하지만, 더 높은 수준의 추상화를 제공할 수 있다.
+    - `ReactHost`는 `ReactNativeHost`를 포함하여 애플리케이션 컨텍스트와 함께 기본 설정을 제공한다.
+2. **애플리케이션 컨텍스트 관리:**
+    - `ReactHost`는 애플리케이션 컨텍스트를 관리하고, 이를 통해 React 인스턴스가 애플리케이션과 상호작용할 수 있게 한다.
+
+---
+
+### 사용법은 ios 에서 IDFA를 가져왔을때와 같이 NativeModule을 임포트하고 사용하면 된다. 궁금하다면 IDFA 가져오기 편을 확인 바란다!
+
+### 결과 !!
+
+---
+
+![image](https://github.com/user-attachments/assets/4910d4ff-1bb9-4eae-bb47-19fd7bc0c88a)
+
+---
+
+### 요약
+
+안드로이드와 ReactNative가 통합되기 위해서는
+
+어떠한 기능을하는 네이티브 모듈을 구현하고, 이 모듈을 포함하는 패키지를 생성해 ReactNative에 등록할 준비를 한다.
+
+그 후, 앱실행시 안드로이드 앱의 앤트리포인트가 되는 MainApplication.kt 파일에서, 안드로이드 앱 전반적인 환경과 내가 추가한 모듈을 담아 초기화하게 해서 로드 되도록 하는것이다. 
+
+즉, MainApplication.kt 파일에서 여러가지를 담아 초기화 시켜 앱이 시작될때, 설정들을 적용하거나 어떤 패키지 목록들을 ReactNative모듈에 로드되도록 하는것이라고 볼수 있다.
+
+더 쉽게 말하자면, React Native 어플리케이션이 실행될 때 어떤 설정과 어떤 것들을 담아 초기화 할건지를 결정하고 로드될수 있게 해주는 역할을 한다는 것이다.
+
+RN 의 index.js와 유사하지만 얘는 초기화 작업을 하는것이다!
+
+---
+
+### IOS와 비교요약
+
+- **안드로이드:** **`MainApplication.kt`** 파일에서 **`ReactNativeHost`**와 **`ReactHost`**를 통해 네이티브 모듈과 패키지를 관리하고 초기화한다. **`SoLoader`**를 사용하여 네이티브 라이브러리를 로드하며, 새로운 아키텍처 사용 여부에 따라 초기화 과정을 다르게 처리한다.
+- **iOS:** Objective-C 또는 Swift를 사용하여 네이티브 모듈을 구현하고, **`RCTBridgeModule`** 프로토콜과 **`RCT_EXPORT_METHOD`** 매크로를 사용하여 JavaScript와 상호작용한다. 브리징 헤더 파일을 통해 Swift와 Objective-C 간의 상호 운용성을 제공한다.
+
+
+
+
+코드들을 import부터 하나하나 정리하다, 나는 조금 더 과정을 이해하게 되었지만, 누군가에게 정말 핵심을 설명하기엔 아직 부족한 블로그 포스팅이 된것 같다. 앞으로 계속 노력해서 누구나 쉽고 간단하게 이해할 수 있도록 하는 포스팅을 해야겠다라는 생각을 하게 됐다! 더 노력하자 화이팅! 다음에 조금 더 다듬어서 좋은 블로깅이 될 수 있도록 하겠다.

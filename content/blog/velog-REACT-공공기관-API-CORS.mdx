@@ -1,0 +1,169 @@
+---
+title: "[REACT] 공공기관 API CORS"
+description: "CORS 오류 우회!"
+date: "2024-10-31"
+tags: ["React","cors"]
+---
+
+> REACT NATIVE로 앱을 만들어서 공공기관 API를 통해 주소를 검색하고 찾을때는 http 에 걸리지 않아서 CORS에러가 발생하지 않았다. 하지만 관리자 웹페이지에서도 주소 검색이 필요해서 적용하려 했더니, CORS 에러가 발생했다. 따라서 해결법을 기록하고자 한다!
+> 
+
+처음엔 axios를 이용해 처리를 하고 당연히 통신이 되겠거니 했지만, 되지 않았다.
+
+그래서 `http-proxy-middleware` 라이브러리를 사용하여 해결하려 시도해봤다.
+
+- 라이브러리를 이용해, 클라이언트의 요청을 다른 서버로 전달하여, 클라이언트가 직접 해당 서버에 요청하지 않고도 데이터를 가져올 수 있게 해주기에 이걸 이용하여 CORS 문제를 우회하는 시도를 해봤지만, 실패했다..!
+
+실패해서 현실부정하며 몇가지를 더 추가적으로 시도해보다가, 공공데이터의 QNA 게시판에 나와 같은 상황에 처한 사람의 글의 답변을 보니 해결해줄수는 없으며
+
+`JS에서 호출 시 dateType을 JSONP로 호출하거나 백엔드에서 처리, 브이월드 proxy 주소 구현 등의 방법으로 처리하시면 됩니다.` 라는 답변을 확인했고 JSONP로 호출하는 방법을 시도해보기로 했다.
+
+JSONP란?
+
+JSONP (JSON with Padding)는 웹에서 데이터를 요청할 때 CORS (Cross-Origin Resource Sharing) 문제를 우회하기 위해 사용되는 기술이다. JSONP는 주로 클라이언트가 다른 도메인에서 데이터를 요청할 수 있도록 해주는 방법인것이다. 
+
+**JSONP의 특징**
+
+스크립트 태그 사용
+
+- JSONP는 &lt;script&gt; 태그를 사용하여 데이터를 요청합니다. 브라우저는 스크립트 태그를 통해 다른 도메인에서의 요청을 허용하므로, CORS 문제를 피할 수 있습니다.
+
+콜백 함수
+
+- JSONP 요청에서는 클라이언트가 서버에 콜백 함수의 이름을 전달합니다. 서버는 이 콜백 함수를 사용하여 응답 데이터를 감싸서 반환합니다. 클라이언트는 이 콜백 함수를 통해 응답을 처리합니다.
+
+서버의 응답 형식
+
+- 서버는 클라이언트가 요청한 콜백 함수로 감싸진 JSON 데이터를 반환해야 합니다. 예를 들어, 클라이언트가 callbackFunction이라는 이름의 콜백 함수를 요청했다면, 서버의 응답은 다음과 같은 형식이다.
+    
+    `callbackFunction(&#123;"key": "value"&#125;);`
+    
+
+**JSONP 작동 원리 및 방법**
+
+1. 클라이언트의 요청
+- 클라이언트는 JSONP 요청을 위해 &lt;script&gt; 태그를 생성하고, src 속성에 요청할 URL을 설정한다. 이 URL에는 콜백 함수의 이름이 포함된다.
+
+```
+예)
+const script = document.createElement("script");
+script.src = "https://api.example.com/data?callback=callbackFunction";
+document.body.appendChild(script);
+```
+
+1. 서버의 응답
+- 서버는 요청을 받고, 클라이언트가 요청한 콜백 함수로 감싸진 JSON 데이터를 반환한다.
+- 특징에서 말했듯 `callbackFunction(&#123;"key": "value"&#125;);`  이러한 응답을 반환해준다.
+1. 클라이언트의 처리
+- 응답으로 온 callback함수를 호출해서 데이터를 처리하면 된다!
+
+### 그럼 이제 해결한 코드를 보며 한줄 한줄 설명하겠다.
+
+```jsx
+export const getAddressControlles = async (page, text) => {
+  const callbackName = "callback";
+  const response = await new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = `https://api.vworld.kr/req/search?
+					    service=search&request=search&version=2.0
+						   &query=${text}&type=address&category=road
+						   &format=json&errorFormat=json&callback=${callbackName}
+						   &page=${page}&size=20&key=${process.env.REACT_APP_VWORLD_KEY}`;
+
+    window[callbackName] = (data) => {
+      resolve(data);
+      document.body.removeChild(script);
+      delete window[callbackName];
+    };
+
+    script.onerror = () => {
+      reject(new Error("JSONP request failed"));
+      document.body.removeChild(script);
+      delete window[callbackName];
+    };
+
+    document.body.appendChild(script);
+  });
+
+  console.log(response);
+};
+
+```
+
+`const callbackName = "callback";`
+
+- **역할**: JSONP 요청에서 사용할 콜백 함수의 이름을 정의한다.
+- JSONP 방식에서는 서버가 응답을 반환할 때 클라이언트가 정의한 콜백 함수를 호출해야 하므로, 이 이름을 사용하여 전역에서 접근할 수 있도록 한다.
+- API 응답이 도착했을 때 호출될 콜백 함수의 이름을 설정하여, 응답을 처리할 수 있는 준비를 한다.
+
+`const response = *await* new Promise((*resolve*, *reject*) => &#123;&#125;`
+
+- **역할**: 새로운 Promise 객체를 생성합니다. 이 Promise는 비동기 작업의 결과를 처리하기 위해 사용한다.
+- API 요청이 완료될 때까지 기다리기 위해 Promise를 사용하여 비동기 처리를 구현한다.
+- 요청이 성공하면 resolve하여 처리하고, 실패는 reject로 결과를 처리한다.
+
+`const script = document.createElement("script");`
+
+- **역할**: 새로운 `&lt;script&gt;` HTML 요소를 생성한다.
+- JSONP 요청을 위해 스크립트 태그를 사용하여 외부 API를 호출해야 하기에, 생성 해준다.
+- API 요청을 위한 스크립트 태그를 준비!
+
+`script.src = https://api.vworld.kr/req/search?service=search&request=search&version=2.0&query=$&#123;text&#125;&type=address&category=road&format=json&errorFormat=json&callback=$&#123;callbackName&#125;&page=$&#123;page&#125;&size=20&key=$&#123;process.env.REACT_APP_VWORLD_KEY&#125;`;
+
+- **역할**: 생성한 스크립트 태그의 src 속성을 설정하여 VWorld API의 URL을 지정한다.
+- API 요청에 필요한 매개변수를 URL에 포함시켜 요청을 구성한다. JSONP 방식에서는 콜백 함수 이름도 URL에 포함해야한다.
+- API에 대한 요청에 필요한 모든 매개변수가 포함된 URL이 생성된것이다.  준비완료!
+
+`window[callbackName] = (*data*) => &#123;&#125;`
+
+- **역할**: window 객체에 콜백 함수를 정의합니다. 이 함수는 API 응답이 도착했을 때 호출하는 함수다.
+- JSONP 방식에서는 서버가 응답을 반환할 때 클라이언트가 정의한 콜백 함수를 호출해야 하므로, 이를 통해 응답을 콜백함수로 처리한다.
+- API 응답을 처리할 수 있는 콜백 함수를 정의해준 것이다.
+
+`resolve(data);` 
+
+- **역할**: API로부터 제대로 응답 받았다면, 받은 데이터를 resolve 함수를 호출하여 Promise를 해결해주게 한다.
+- API 요청이 성공적으로 완료되었을때 실행되고, 응답 데이터를 사용하기 위해 사용한다.
+- 진행됐다면 response에 결과값이 담긴것이다.
+
+```
+document.body.removeChild(script);
+delete window[callbackName];
+```
+
+- **역할**: 성공 여부와 상관없이 스크립트 태그를 문서에서 제거하고, 콜백 함수를 삭제하여 불필요한 리소스를 정리해준다. DOM에서도 스크립트를 제거하고, window 객체에서도 callback함수를 제거해준다.
+- 이렇게 전역 네임스페이스를 정리하여, 코드 충돌등을 방지해준다.
+
+`script.onerror = () => &#123;&#125;`
+
+- **역할**: 스크립트 로드 중 오류가 발생했을 때 호출될 함수를 정의해준다.
+- 즉, API 요청 실패 시에 어떻게 처리할지를 정의해준것이다.
+
+`reject(new Error("JSONP request failed"));`
+
+- **역할**: 오류가 발생하면 reject 함수를 호출하여 Promise를 거절해준다.
+- 이를 통해 호출자에게 API 요청실패와 오류를 전달해준다.
+
+`document.body.appendChild(script);`
+
+- **역할**: 생성한 스크립트 태그를 문서의 &lt;body&gt;에 추가해서, 실제로 요청이 들어가게 한다.
+- 스크립트를 DOM에 추가해줘야 요청이 들어가니, 이 부분이 axios.get 과 같은 역할을 하는 것이다.
+
+이 방식으로 CORS 문제를 해결? 이라고 하기보단 우회하여, 제대로 된 값을 받을수 있게 되었다.
+
+좀 더 JSONP 요청 방식에 대해 알아봤다. 아래의 장점과 단점이 있으니 때에 잘 맞춰서 사용해야겠다.
+
+**장점**
+
+- **CORS 우회**: JSONP는 CORS 문제를 피할 수 있는 간단한 방법이다.
+- **비동기 처리**: JSONP 요청은 비동기적으로 처리되므로, 페이지의 다른 부분이 멈추지 않고 계속 작동한다.
+
+### 단점
+
+- **보안 문제**: JSONP는 스크립트 태그를 사용하므로, 악의적인 서버가 클라이언트의 데이터를 조작할 수 있는 위험이 있다고 한다. 따라서 신뢰할 수 있는 서버와만 사용해야 한다!!!
+- **HTTP GET 요청만 지원**: JSONP는 GET 요청만 지원하므로, POST 요청이나 다른 HTTP 메서드를 사용할 수 없다.
+
+즉, JSONP는 CORS 문제를 해결하기 위한 기술로, 클라이언트가 다른 도메인에서 데이터를 요청할 수 있도록 해줍니다. 그러나 보안상의 이유로 사용에 주의가 필요하며, 가능하다면 CORS를 지원하는 API를 사용하는 것이 더 안전하다!!!! 하지만 공공기관이니 악의는 없을것으로 보인다 ㅎㅎ
+
+> 일단 문제가 해결되어 기분이 좋다..ㅎ. 그리고 이렇게도 API 요청을 할 수 있다는 사실을 알게 되어 기쁨에 이렇게 포스팅을 남겨놓는다!!
+>

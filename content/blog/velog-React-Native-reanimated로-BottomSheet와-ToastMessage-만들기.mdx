@@ -1,0 +1,204 @@
+---
+title: "[React Native] reanimated로 BottomSheet와 ToastMessage 만들기"
+description: "reanimated 로 구현한 토스트메세지, 바텀시트!!"
+date: "2024-03-22"
+tags: ["React Native","Reanimated"]
+---
+
+> Reanimated 로 무엇을 해보면 좋을까 하다, `ToastMessage`와 `BottomSheet`를 라이브러리를 사용하지 않고 직접 한번 구현해보기로 했다.
+> 
+
+### ToastMessage
+
+
+![스크린샷 2024-03-22 오후 8 39 18](https://github.com/crucial-sub/odot/assets/82592845/f1a3c961-c9d6-4934-9d71-d98e0e5c6735)
+
+- 우리가 여러가지 앱을 사용하면서 위와 같이 알림을 띄워주는 토스트 메시지를 많이 만나볼 수 있다.
+
+
+그럼 이를 구현하는 방법은 무엇이 있을까?
+
+1. RN toast Message 라이브러리 사용  ( [링크](https://www.npmjs.com/package/react-native-toast-message) )
+2. 직접 구현 
+
+1번은 대표적으로 많이 사용되는 라이브러리다. 이 라이브러리를 사용하면 손쉽게 사용할 수 있으므로, 이 라이브러리에 대해서는 나중에 정리하는것으로 하고! 
+
+직접 구현하는 방법에 대하여 알아보겠다.
+
+처음 생각한 방식
+
+1. 토스트 메시지 **컴포넌트**를 만든다.
+2. 사용이 필요한 스크린에 **토스트 메시지 컴포넌트**를 넣는다.
+3. 어떤 상황에 맞춰서 **isVisible** 같은 상태값을 **true**로 만든다.
+4. 상태값을 props로 받아 이에 맞춰서 **Reanimated** 를 넣는다.
+
+위처럼 구현 하는 도중 생각해보니, 보통의 앱이라면 토스트 메시지를 여기 하나에서만 사용하지는 않을거라는 생각이 들었다.
+
+고로, 모든스크린에서 토스트 메시지가 필요할때마다 사용할 수 있도록 하는 방법을 생각하던 중 아래와 같은 방식으로 진행하기로 했다.
+
+1. 토스트 메시지 컴포넌트를 만든다.
+2. 모든 화면에서의 토스트 메시지를 노출 가능성을 주기 위해, 전역상태 관리 **recoil**을 사용한다. 
+3. 내가 사용하는 모든 스크린이 통하는 `App.tsx` 에 `&lt;RecoilRoot&gt;` 를 사용하여  감싸준다.
+4. `&lt;NavigationContainer&gt;` 안에 **`ToastMessage`** 컴포넌트를 넣어준다.
+
+이런 방식으로 하면 모든 곳에서 사용할 수 있을거라고 생각했고 실제로 가능했다. 
+
+이제 실제 구현한 코드를 바탕으로 설명을 이어가도록 하겠다.
+
+1. **전역 상태 관리 ( Recoil )**
+
+![스크린샷 2024-03-22 오후 7 40 05](https://github.com/crucial-sub/odot/assets/82592845/27f14576-506f-479c-8cd6-063643d4c531)
+
+- `IToastMessage`  - 토스트메시지를 구성할 상태들의 `type` 을 선언 해준다.
+    - **type** - 성공,실패 등 상태 / **message** - 전달할 메시지 / sub는 혹시 추가할 말이 있으면 사용하려고 추가만 해뒀다.
+- `initialToastState` - 초기값을 담아준다.
+- `atom&lt;타입&gt;(&#123;key: “원하는키이름”, default: 기본값&#125;)`  이렇게 리코일을 사용할수 있도록 한다.
+    - **ToastMessage** 구성 요소와 **ToastMessage**가 보이고 안보이고를 설정해줄 `toastVisibility` 도 선언해서 전역에서 사용할 수 있도록 해줬다.
+
+1. **`Hook`** 을 만들어준다.
+
+![스크린샷 2024-03-22 오후 7 45 23](https://github.com/crucial-sub/odot/assets/82592845/9ac74b52-073f-48c6-a4ae-54e91ffde56f)
+
+목적 - **visibility** 상태가 **true**가 되면 토스트메시지를 보여주고 시간이 좀 지나면  자동으로 꺼지도록 하는 로직을 ToastMessage의 기본 로직으로 하기 위해, **Hook** 을 만들어 어디서도 쉽게 사용할 수 있도록 해주기 위함이다.
+
+- **`useRecoilState()`** 를 사용하여 **토스트메세지**와 관련된 상태값을 변경할 수 있도록 한다.
+- `showToast()` 함수를 만든다.
+    - 이 함수는 토스트 메시지 구성요소들을 매개변수로 받아서 `setToastMessage` 로 알맞게 할당해준다.
+    - **ToastMessage**를 보이도록 해주기 위해 **`setIsVisible`** 로 isvisible도 true값으로 변경해준다.
+    - 그 후 내가 지정한 시간이 지나면 ToastMessage를 보이지 않게하고 다음 토스트 메시지를 위해 구성 요소를 초기화 시켜준다.
+        - `setTimeout(() ⇒ &#123;실행할것들&#125;, 숫자ms);` 를 사용하여 일정 시간초가 지나면  실행되게끔 했다.
+
+1. 이제 유저에게 보여줄 ToastMessage 컴포넌트를 만든다.
+
+![스크린샷 2024-03-22 오후 7 57 36](https://github.com/crucial-sub/odot/assets/82592845/3ae577eb-e1d3-42f8-bf4f-450816ef02ca)
+
+- **isToastOn** 로 관리를 해주기 위해 **useRecoilValue** 를 **사용하여 값을 사용**할 수 있도록 한다. 또한 **toastMessage** 도 포함!
+- **isToastOn** 이 **true** 일 경우에 보여줄 수 있도록 하기 위해 조건문을 걸어준다.
+- **Reanimated**에서 제공해주는 애니메이션을 사용해보고 싶어서 **entering(들어올때) exiting(나갈때)** 각각 **FadeIn, FadeOut** 효과를 넣어줬다.
+    - 여러가지 애니메이션을 제공해주니 사용해보면 좋을것 같다!
+    
+1. 마지막으로 **ToastMessage**가 보여질 수 있도록 **trigger**를 설정해준다.
+
+![스크린샷 2024-03-22 오후 8 11 18](https://github.com/crucial-sub/odot/assets/82592845/adecceee-3518-41e0-994b-35c3cc8440e9)
+
+- 위에서 만든 **useToast()** 훅을 사용해서 구성요소들을 넣어주고, **isVisible**을 **true**로 설정해주도록 한다.
+- 이제 **&lt;TouchableOpacity&gt;** 를 클릭하면 토스트 메시지를 볼 수 있다!
+
+### 완성!
+  
+&lt;div style="display: flex; justifyContent: center"/ &gt;
+  ![이미지](https://velog.velcdn.com/images/spacebelt/post/5bba3c11-b4b2-4402-b9c5-574783fcea5c/image.gif)
+&lt;/div&gt;
+
+  
+
+### BottomSheet
+
+  &lt;div style="display: flex; justifyContent: center"/ &gt;
+![스크린샷 2024-03-22 오후 8 41 14](https://github.com/crucial-sub/odot/assets/82592845/90e6885b-e660-4b9a-9756-f0c369c345d1)
+    &lt;/div&gt;
+
+- **ToastMessage**와 마찬가지로 위와 같은 형태의 컴포넌트를 많이 봤을것이다. 이를 **BottomSheet** 라 한다.
+
+이 또한 이 [ [링크](https://github.com/gorhom/react-native-bottom-sheet) ] 로 가면 라이브러리를 확인 할 수 있지만, 이 역시 reanimated에 익숙해지기 위해 직접 구현해 보았다.
+
+방식은 **ToastMessage**와 동일하게 **Recoil**과 **Custom Hook**을 이용하여 구현해보았다.
+
+차이점
+
+- **ToastMessage**는 **string**등을 전역상태로 관리했다면 이 경우엔 **ReactElement** 타입으로 컴포넌트를 받아서 안의 내용을 자유롭게 구성할 수 있도록 했으며,
+- **ToastMessage**는 자동으로 사라지게 했다면, 이번엔 어떠한 액션이 일어나면 토스트 메시지가 꺼질 수 있도록 했다.
+- 바텀 시트 밖의 영역을 클릭하면 바텀시트가 가려진다.
+
+그럼  구현 코드와 함께 알아보자! ( 골자가 비슷함으로 다른 부분만 설명하도록 하겠다 )
+
+1. 전역 상태 관리 **( Recoil )**
+
+![스크린샷 2024-03-22 오후 8 52 23](https://github.com/crucial-sub/odot/assets/82592845/2df5b00a-ddc1-4f60-94b4-b61c87660de0)
+
+- 위 코드에서 값을 불필요하게 객체 형태로 담아서 관리 했는데, 이렇게 하지 않는것이 좋을것으로 보인다!
+
+1. **Custom Hook** 생성
+
+![스크린샷 2024-03-22 오후 9 01 32](https://github.com/crucial-sub/odot/assets/82592845/ed99861a-a087-4102-8ab6-2b45e75b0cec)
+
+- **showBottomSheet()**  리엑트엘리먼트 요소를 매개변수로 받아서 **BottomSheet**   를 보여줄 수 있는 함수를 생성한다.
+- **hideBottomSheet()** 함수를 생성한다. **ToastMessage**에서는 설정한 시간에 맞게 사라지도록 했지만 이번엔 이 함수가 실행되어야 **BottomSheet**가 사라진다.
+
+1. **BottomSheet** 컴포넌트 생성
+
+![스크린샷 2024-03-22 오후 9 19 35](https://github.com/crucial-sub/odot/assets/82592845/60f59b23-391a-4013-949d-81e0ab034cf9)
+
+- `Dimensions`  를 활용하여 스크린의 높이를 구한다.
+- 각 핸드폰 크기에 따라 **height** 를 다르게 하기 위해 bottomSheetHeight에 값을 할당해놓는다.
+- **useRecoilValue** 를 사용하여 안에 들어갈 **content**와 **isVisible**을 사용할 수 있도록 하고, **Custom Hook**의 바텀시트 컴포넌트를 언마운트 시킬 **hideBottomSheet()** 함수를 가져온다.
+- 위의 부분은 **isVisible** 값과 reanimated에서 제공해주는 animation인 **FadeIn, FadeOut** 을 사용하여 애니메이션 효과를 적용해주었고, duration을 1000ms(1초)로 설정해줬다.
+    - 해당 부분을 클릭하면 bottomSheet 컴포넌트를 unmount 시킨다!
+- **top** 에 스크린의 총 높이를 할당하여, 처음에는 보이지 않도록 한다.
+    - **absolute**로 되어있기에 보이는 스크린 밑에 위치하도록 구현했다.
+- **BottomSheet** 가 필요한 스크린에서 **showBottomSheet()** 가 실행되면 **isVisible** 의 값이 변함으로 이 값을 **useEffect**의 **dependency**로 하여 **top.value**의 값을 **withTiming**을 사용하여 시간에  따라 값을 변화시키는 애니메이션을 생성해준다.
+    - 따라서, 처음에 **top**에 설정했던   `전체높이  - 바텀시트의 높이` 가 되어 그 차이의 값으로 변하는 **animation**이 적용되게 된다.
+    - 즉, **absolute**로 아래에 내려가있던 바텀시트가 스르륵 올라오는 애니메이션으로 나오게 된다!
+- **useEffect**의 **setTimeout()**은  **isVisible**로만 관리하다보니 없어질때 순식간에 사라져서 다른 상태값 하나를 조절하여 관리되도록 했다.
+  
+  
+### 완성!
+
+&lt;div style="display: flex; justifyContent: center; flexDirection: row;"/ &gt;  
+	![이미지](https://velog.velcdn.com/images/spacebelt/post/9394dd79-aa12-4ef6-b46d-c8cbb194bbbf/image.gif)
+  ![이미지](https://velog.velcdn.com/images/spacebelt/post/ac97904b-7375-4583-b4c9-267eafd12e58/image.gif)
+&lt;/div&gt;
+
+
+
+
+
+  
+
+  
+
+
+--- 
+### Reanimated  간단 사용 방법 정리
+
+---
+
+1. **useSharedValue** 훅을 사용하여 애니메이션에 사용할 값을 초기화한다.
+    
+    `const translateX = useSharedValue(0);`
+    
+2. 애니메이션에 사용할 값을 **useAnimatedStyle**을 통해 사용할 수 있도록 해준다.
+    
+    ```jsx
+    const animatedStyle = useAnimatedStyle(() => {
+      return {
+        transform: [
+    	    { translateX: 
+    		    interpolate(translateX.value, [0, 300], [0, 100]) 
+    	    }
+        ],
+      };
+    });
+    ```
+    
+3. 2번에서 사용한 useAnimatedStyle 훅을 통해 정의한 **animatedStyle** 를 적용해준다. 
+    
+    `&lt;Animated.View style=&#123;[styles.box, animatedStyle]&#125; /&gt;`
+    
+4. `translateX.value` 값을 변경시켜주는 로직을 작성한다.
+    
+    ```jsx
+    const handlePress = () => {
+      translateX.value = withSpring(Math.random() * 300);
+    }; 
+    ```
+    
+    - **withSpring** 등을 사용하여 애니메이션을 적용한다.
+    - **withTiming, withDelay** 등 여러가지가 있으니 하나씩 사용해보면 좋다!
+
+---
+
+이 외에도 사용하는 방법은 아주 많으니 하나하나 다 파해쳐보는 시간을 가져 reanimated의 고수가 되도록 계속 정진하도록 하겠다! 
+
+
+  

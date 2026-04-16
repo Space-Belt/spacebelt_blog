@@ -1,0 +1,33 @@
+---
+title: "[React Native] 내가 보기 위한  FlatList 기본 Props 정리"
+description: "나를 위한 정리"
+date: "2024-03-06"
+tags: ["RN 컴포넌트 사용법 정리"]
+---
+
+### FlatList
+
+1. `onEndReach`
+    - 다시부르는것을 시작할때 뭘할지
+2. `onEndReachedThreshold=&#123;0.8&#125;` 
+    - onEndReach의 지점을 설정해줌, 1이 default
+3. `data`
+    - 리스트로 뿌려질 데이터의 배열을 넣어줍니다.
+4. `renderItem`
+    - 뿌려질 리스트 컴포넌트를 정의하여 넣어줍니다.
+5. `keyExtractor`
+    - 각 리스트의 고유한 키를 추출하는 함수를 정의하여 넣어줍니다.
+6. `horizontal`
+    - 수평으로 렌더링할지 여부를 넣어줍니다.
+7. `numColumns`
+    - 열의 수를 정해줍니다. 한 라인에 몇개씩 표시할지
+8. `ListHeaderComponent`
+    - 리스트의 시작 부분에 렌더링할 컴포넌트를 정의 (헤더)
+9. `ListFooterComponent`
+    - 리스트의 끝 부분에 렌더링할 컴포넌트를 정의 (푸터)
+10. `refreshing`
+    - 리스트를 새로 고침할 때 화면에 표시할지 여부를 정의합니다.
+11. `OnRefresh`
+    - 리스트가 새로 고침될 때 호출되는 함수를 정의합니다.
+12. `contentContainerStyle`
+    - styling을 했을때 안에 이 contentContainer가 실제로 감싸고 있는 아이로, styling이 먹지 않는다면 여기에 styling을 해줘야합니다.

@@ -1,0 +1,34 @@
+---
+title: "[React Native] SectionList 정리"
+description: "SectionList???"
+date: "2024-03-06"
+tags: ["RN 컴포넌트 사용법 정리"]
+---
+
+---
+
+> FlatList와 마찬가지로 ScrollView 기반으로 만들어진 리엑트 네이티브의 리스트 컴포넌트
+> 
+
+FlastList와 거의 유사하나 SectionList는 우리가 사용하는 휴대전화에 있는 연락처 목록에서 스크롤을 해보면 섹션에 ㄱ(초성)이 리스트 상단에 sticky 처리를 한것 마냥 따라다닌다. 
+
+바로 이점이 FlatList와 다른 점이다.
+
+따라서 data Props에 FlatList와는 다르게 넣어줘야 한다.
+
+**FlatList의 데이터 예시**
+
+![스크린샷 2024-03-06 오후 7 43 40](https://github.com/Space-Belt/blockcoaster/assets/82592845/77c03e65-62f3-4064-b7af-5a938b1b3e7f)
+
+SectionList의 데이터 예시
+
+![스크린샷 2024-03-06 오후 7 42 59](https://github.com/Space-Belt/blockcoaster/assets/82592845/95ed67b1-e6cc-4862-bc0e-d6c1693a63ec)
+
+이런식으로 Section을 구분할 것을 넣어줘야한다.
+
+SectionList가 받는 prop 이 하나 더 있는데 아래와 같다.
+
+1. **renderSectionHeader**
+    - 각 리스트의 Section 부분 컴포넌트를 정의해줄 수 있다.
+
+중요한것은 ScrollView / FlatList / SectionList 를 각 상황에 맞게 적절히 잘 사용하는것이다. 무의미하게 FlatList를 쓰지 않아도 될때 사용하거나, 데이터가 많은데 ScrollView를 사용하거나 등 잘 판단하는것이 개발자의 몫! 인것 같다.

@@ -1,0 +1,84 @@
+---
+title: "Sending ‘onAnimatedValueUpdate’ with no listeners registered 해결 기록"
+description: "Sending ‘onAnimatedValueUpdate’ with no listeners registered"
+date: "2024-05-07"
+tags: ["error"]
+---
+
+# **Sending ‘onAnimatedValueUpdate’ with no listeners registered**
+
+### 발생원인
+
+로그인 페이지에는 바텀탭을 적용하지 않기위해 네비게이터를 조건문으로 분리를 했기에, Stack이 분리 되었기에, 이전 페이지를 찾지 못하여, mount된 Home 화면이 unmount 될 리스너를 찾지 못했기에 발생했던 오류였다.
+
+즉, 네비게이터를 올바르게 사용하지 못했다.
+
+### 해결
+
+1. MainScreen 에서 조건문으로 분리한 것 수정
+
+```
+<RootStack.Navigator screenOptions={{headerShown: false}}>
+  <RootStack.Screen
+    name="MainStackNavigator"
+    component={MainStackNavigator}
+  />
+</RootStack.Navigator>
+```
+
+1. MainStackNavigator에 BottomTab을 추가
+
+```tsx
+const MainStackNavigator = () => {
+  return (
+    <MainStack.Navigator
+      screenOptions={{headerShown: false}}
+      initialRouteName="SignInScreen">
+      <MainStack.Screen name="SignInScreen" component={SignInScreen} />
+      <MainStack.Screen name="SignUpScreen" component={SignUpScreen} />
+      <MainStack.Screen name="BottomTab" component={BottomTabNavigator} />
+      <MainStack.Screen
+        name="MovieDetailScreen"
+        component={MovieDetailScreen}
+      />
+      <MainStack.Screen
+        name="EditProfileScreen"
+        component={EditProfileScreen}
+      />
+    </MainStack.Navigator>
+  );
+};
+```
+
+### 검색해본 다른 해결 방법
+
+1. /node_modules/@react-navigation/stack/src/views/Stack/Card.tsx 를 수정
+2. componentDidMount()
+
+```jsx
+componentDidMount() {
+  this.animate({ closing: this.props.closing });
+  this.isCurrentlyMounted = true;
+  this.props.gestur.addListener(() ⇒ { return });
+}
+```
+
+- this.props.gestur.addListener(() ⇒ &#123; return &#125;); 을 추가
+    - mount 됐다는 리스너 를 등록한것
+1. componentWillUnmount() 
+
+```jsx
+componentWillUnmount() {
+  this.props.gesture.stopAnimation();
+  this.isCurrentlyMounted = false;
+  this.handleEndInteraction();
+  this.props.gesture.removeAllListeners();
+}
+```
+
+- this.props.gesture.removeAllListeners();
+    - mount 된 리스너를 지워주는 것
+1. node_modules를 직접 업데이트 했음으로 소스를 수정해준다.
+- `yarn patch-package @react-navigation/stack`
+
+참 고 -  [https://velog.io/@dev_jiwon/React-Native-Animation-Warning-Sending-onAnimatedValueUpdate-with-no-listeners-registered-해결](https://velog.io/@dev_jiwon/React-Native-Animation-Warning-Sending-onAnimatedValueUpdate-with-no-listeners-registered-%ED%95%B4%EA%B2%B0)

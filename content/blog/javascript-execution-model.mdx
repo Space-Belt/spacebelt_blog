@@ -1,0 +1,278 @@
+---
+title: "JavaScript를 제대로 이해한다는 것"
+description: "실행 컨텍스트, 클로저, 비동기 처리, 프로토타입을 React 개발자의 관점에서 정리한 첫 JavaScript 글입니다."
+date: "2026-04-13"
+tags: ["JavaScript", "Frontend", "React"]
+---
+
+## JavaScript를 안다는 말의 기준
+
+JavaScript를 안다는 말은 문법을 외웠다는 뜻만은 아니었다. `map`, `filter`, `async`, `await`를 사용할 수 있다는 것도 중요하지만, 더 중요한 것은 코드가 어떤 순서로 실행되고, 값이 어디에 저장되며, 함수가 무엇을 기억하고, 비동기 작업이 언제 다시 이어지는지 설명할 수 있는 것이었다.
+
+React와 React Native를 쓰면서 이 기준은 더 분명해졌다. 화면이 다시 렌더링되는 이유, 상태가 예상과 다르게 보이는 이유, 이벤트 핸들러 안의 값이 오래된 이유, API 요청 후 UI가 늦게 바뀌는 이유는 대부분 JavaScript의 기본 동작과 연결되어 있었다.
+
+<Callout>
+JavaScript는 단순히 브라우저에서 돌아가는 언어가 아니라, 프론트엔드 화면의 시간, 기억, 흐름을 다루는 언어다.
+</Callout>
+
+## 실행 컨텍스트는 코드가 일하는 방이었다
+
+JavaScript 코드는 위에서 아래로 읽히지만, 실제로는 그냥 줄줄이 흘러가는 것이 아니었다. 코드가 실행될 때마다 JavaScript 엔진은 실행 컨텍스트라는 작업 공간을 만들었다.
+
+쉽게 비유하면 실행 컨텍스트는 요리사가 요리를 시작하기 전에 차리는 조리대와 같았다. 조리대 위에는 지금 사용할 재료, 레시피, 도구가 올라간다. 함수가 호출되면 새로운 조리대가 생기고, 함수가 끝나면 그 조리대는 정리된다.
+
+```js
+const name = "Spacebelt";
+
+function greet() {
+  const message = "Hello " + name;
+  return message;
+}
+
+greet();
+```
+
+이 코드에서 전역 실행 컨텍스트에는 `name`과 `greet`가 준비되었다. `greet()`가 호출되는 순간 함수 실행 컨텍스트가 새로 만들어지고, 그 안에서 `message`가 계산되었다.
+
+이 구조를 이해하면 스코프도 더 자연스럽게 이해할 수 있었다. 함수 안에서 바깥 변수를 읽을 수 있는 이유는, 함수가 자기 조리대에서 찾지 못한 재료를 바깥 조리대에서 찾기 때문이었다.
+
+## 콜 스택은 현재 처리 중인 일의 순서표였다
+
+JavaScript는 기본적으로 한 번에 하나의 일을 처리한다. 이때 어떤 함수가 실행 중인지 쌓아두는 구조가 콜 스택이었다.
+
+```js
+function first() {
+  second();
+}
+
+function second() {
+  third();
+}
+
+function third() {
+  console.log("done");
+}
+
+first();
+```
+
+실행 순서는 `first`, `second`, `third`로 들어갔다가, `third`, `second`, `first` 순서로 빠져나왔다. 접시를 쌓고 치우는 것과 비슷했다. 마지막에 올린 접시를 가장 먼저 치우는 구조였다.
+
+React에서 에러 스택을 읽을 때도 이 개념이 도움이 되었다. 에러 메시지에 여러 함수 이름이 쌓여 있다면, JavaScript가 어떤 호출 경로를 따라 문제 지점까지 도착했는지를 보여주는 기록이었다.
+
+## 클로저는 함수가 기억을 들고 다니는 방식이었다
+
+클로저는 처음에는 어렵게 느껴졌지만, 실제로는 함수가 만들어질 당시의 주변 환경을 기억하는 동작이었다.
+
+```js
+function createCounter() {
+  let count = 0;
+
+  return function increase() {
+    count += 1;
+    return count;
+  };
+}
+
+const counter = createCounter();
+
+counter(); // 1
+counter(); // 2
+counter(); // 3
+```
+
+`createCounter` 함수는 이미 끝났는데도 `increase` 함수는 `count`를 계속 기억했다. 이때 `increase`가 `count`를 기억하고 있는 구조가 클로저였다.
+
+비유하면 클로저는 함수가 작은 가방을 들고 다니는 것과 같았다. 함수가 태어난 순간 주변에 있던 필요한 값을 가방에 넣고, 나중에 다른 곳에서 실행되어도 그 값을 꺼내 쓸 수 있었다.
+
+React에서도 이 개념은 매우 중요했다. 이벤트 핸들러, `useEffect`, `setTimeout`, 커스텀 훅은 모두 클로저와 연결되어 있었다.
+
+```tsx
+function Counter() {
+  const [count, setCount] = useState(0);
+
+  function handleClick() {
+    setTimeout(() => {
+      console.log(count);
+    }, 1000);
+  }
+
+  return <button onClick={handleClick}>확인</button>;
+}
+```
+
+이 코드에서 `setTimeout` 안의 함수는 클릭이 일어난 시점의 `count`를 기억했다. 사용자가 그 사이에 상태를 바꿔도, 이미 만들어진 함수가 기억하는 값은 다를 수 있었다. 이것이 React에서 오래된 상태, 즉 stale state 문제가 생기는 이유 중 하나였다.
+
+## this는 누가 호출했는지를 보는 값이었다
+
+JavaScript의 `this`는 함수가 어디에 작성되었는지가 아니라, 어떻게 호출되었는지에 따라 달라지는 값이었다.
+
+```js
+const user = {
+  name: "Haja",
+  sayName() {
+    console.log(this.name);
+  }
+};
+
+user.sayName(); // Haja
+```
+
+이 경우 `sayName`은 `user`가 호출했기 때문에 `this`는 `user`였다. 하지만 함수를 따로 꺼내면 상황이 달라졌다.
+
+```js
+const say = user.sayName;
+say(); // undefined 또는 전역 객체의 값
+```
+
+비유하면 `this`는 함수의 주민등록주소가 아니라, 그 함수를 부른 사람의 이름표였다. 누가 불렀는지에 따라 이름표가 달라졌다.
+
+React 함수 컴포넌트에서는 `this`를 거의 쓰지 않지만, JavaScript 객체 메서드, 클래스 문법, 라이브러리 내부 동작을 이해하려면 여전히 중요한 개념이었다.
+
+## 프로토타입은 객체가 기능을 빌려 쓰는 연결고리였다
+
+JavaScript는 클래스 기반 언어처럼 보일 때도 있지만, 내부적으로는 프로토타입 기반으로 객체를 연결한다. 어떤 객체에 원하는 속성이나 메서드가 없으면, JavaScript는 그 객체의 프로토타입을 따라 올라가며 찾는다.
+
+```js
+const numbers = [1, 2, 3];
+
+numbers.map((number) => number * 2);
+```
+
+배열 `numbers` 안에 `map`이라는 함수가 직접 들어 있는 것은 아니었다. `numbers`는 배열의 프로토타입에 연결되어 있고, 그 연결을 통해 `map`을 사용할 수 있었다.
+
+비유하면 프로토타입은 개인 책상에 없는 도구를 공용 도구함에서 빌려 쓰는 구조와 같았다. 내 책상에 망치가 없어도, 공용 도구함에 있으면 가져다 쓸 수 있는 것이다.
+
+이 개념을 알면 `Array.prototype.map`, `Object.prototype.toString`, 클래스 메서드가 왜 모든 인스턴스에서 공유되는지도 이해할 수 있었다.
+
+## 비동기 처리는 기다리는 동안 멈추지 않는 방식이었다
+
+프론트엔드 개발에서 비동기 처리는 피할 수 없었다. API 요청, 이미지 로딩, 타이머, 사용자 이벤트는 모두 지금 당장 끝나지 않을 수 있는 작업이었다.
+
+JavaScript는 한 번에 하나의 일을 처리하지만, 브라우저나 런타임의 도움을 받아 오래 걸리는 일을 맡겨둘 수 있었다. 그리고 일이 끝나면 콜백 큐나 마이크로태스크 큐를 통해 다시 실행 흐름으로 돌아왔다.
+
+```js
+console.log("A");
+
+setTimeout(() => {
+  console.log("B");
+}, 0);
+
+Promise.resolve().then(() => {
+  console.log("C");
+});
+
+console.log("D");
+```
+
+실행 결과는 보통 `A`, `D`, `C`, `B` 순서였다. `setTimeout`의 시간이 0이어도 바로 실행되지 않았다. 지금 실행 중인 동기 코드가 먼저 끝나고, 그 다음 Promise의 마이크로태스크가 처리되고, 이후 타이머 작업이 처리되었다.
+
+비유하면 JavaScript 엔진은 혼자 주문을 받는 직원과 같았다. 직원은 지금 손님을 응대하는 동안 주방에 음식을 맡겨둘 수 있다. 음식이 완성되었다고 해도, 직원이 현재 응대를 끝내기 전까지는 다음 손님에게 가지 않는다.
+
+React Query나 직접 만든 API 요청 로직을 사용할 때도 이 흐름이 중요했다. 데이터를 요청했다고 해서 바로 값이 생기는 것이 아니었다. 그래서 로딩 상태, 에러 상태, 성공 상태를 나누어 UI를 설계해야 했다.
+
+## async와 await는 비동기를 동기처럼 읽게 해주는 문법이었다
+
+`async`와 `await`는 비동기를 동기처럼 읽기 쉽게 만들어주지만, 실제로 비동기 작업이 동기 작업으로 바뀌는 것은 아니었다.
+
+```js
+async function fetchUser() {
+  const response = await fetch("/api/user");
+  const user = await response.json();
+  return user;
+}
+```
+
+`await`는 기다리는 동안 전체 JavaScript 실행을 멈추는 것이 아니었다. 해당 `async` 함수의 다음 줄 실행을 잠시 미루고, 다른 작업이 진행될 수 있게 했다.
+
+이 차이를 이해하면 버튼 클릭 후 로딩 처리, 중복 요청 방지, 언마운트된 컴포넌트의 상태 업데이트 문제를 더 조심해서 다룰 수 있었다.
+
+## 값의 변경은 참조를 이해해야 보였다
+
+JavaScript에서 원시값과 참조값의 차이도 중요했다.
+
+```js
+let a = 1;
+let b = a;
+
+b = 2;
+
+console.log(a); // 1
+```
+
+숫자, 문자열, 불리언 같은 원시값은 값 자체가 복사되는 느낌으로 다룰 수 있었다.
+
+하지만 객체와 배열은 달랐다.
+
+```js
+const user = { name: "Haja" };
+const nextUser = user;
+
+nextUser.name = "Spacebelt";
+
+console.log(user.name); // Spacebelt
+```
+
+객체는 값 전체가 복사된 것이 아니라, 같은 객체를 가리키는 참조가 복사되었다. 비유하면 집 자체를 복사한 것이 아니라 같은 집 주소를 종이에 적어준 것과 같았다. 한 사람이 그 주소의 집 안을 바꾸면, 같은 주소를 가진 다른 사람도 바뀐 집을 보게 된다.
+
+React에서 상태를 직접 수정하면 문제가 생기는 이유도 여기에 있었다.
+
+```tsx
+// 피해야 하는 방식이었다
+user.name = "Spacebelt";
+setUser(user);
+
+// 더 나은 방식이었다
+setUser({
+  ...user,
+  name: "Spacebelt"
+});
+```
+
+React는 참조가 바뀌었는지를 기준으로 변경을 판단하는 경우가 많았다. 그래서 배열이나 객체 상태를 다룰 때는 새로운 참조를 만들어 변경 의도를 명확히 전달해야 했다.
+
+## 모듈은 코드를 나누는 약속이었다
+
+프로젝트가 커질수록 모든 코드를 한 파일에 둘 수 없었다. JavaScript 모듈은 코드를 역할별로 나누고, 필요한 것만 가져다 쓰게 해주는 약속이었다.
+
+```js
+// formatDate.js
+export function formatDate(date) {
+  return new Intl.DateTimeFormat("ko-KR").format(date);
+}
+
+// page.js
+import { formatDate } from "./formatDate";
+```
+
+모듈을 잘 나눈다는 것은 파일을 많이 만든다는 뜻이 아니었다. 책임을 기준으로 코드를 나누는 것이었다. UI 컴포넌트, 데이터 요청 함수, 포맷터, 상수, 타입을 적절히 분리하면 코드의 수정 범위가 작아졌다.
+
+React 프로젝트에서 좋은 폴더 구조를 고민하는 일도 결국 JavaScript 모듈을 어떻게 설계할지의 문제였다.
+
+## React 개발자에게 JavaScript가 중요한 이유
+
+React는 JavaScript 위에 있다. JSX도 결국 JavaScript로 바뀌고, 상태 업데이트도 JavaScript 함수 호출이며, 이벤트 핸들러도 JavaScript 클로저다.
+
+`useState`를 쓸 때 이전 값을 기준으로 업데이트해야 하는 이유, `useEffect`의 의존성 배열이 중요한 이유, `useMemo`와 `useCallback`이 참조 안정성과 연결되는 이유는 모두 JavaScript의 실행 방식과 맞닿아 있었다.
+
+```tsx
+setCount((prevCount) => prevCount + 1);
+```
+
+이 코드는 단순히 숫자를 1 올리는 코드가 아니었다. 현재 클로저가 기억하는 `count`에 의존하지 않고, React가 넘겨주는 최신 상태를 기준으로 계산하겠다는 의미였다.
+
+JavaScript를 제대로 이해하면 React 코드를 더 안전하게 작성할 수 있었다. 버그가 생겼을 때도 감으로 고치는 것이 아니라, 실행 순서와 참조, 클로저, 비동기 흐름을 따라가며 원인을 찾을 수 있었다.
+
+## 내가 생각하는 좋은 JavaScript 코드
+
+좋은 JavaScript 코드는 짧은 코드만을 의미하지 않았다. 다음 사람이 실행 흐름을 예측할 수 있는 코드가 좋은 코드였다.
+
+- 값이 어디에서 만들어지는지 분명해야 했다.
+- 함수가 어떤 값을 기억하는지 이해할 수 있어야 했다.
+- 비동기 작업의 로딩, 성공, 실패 상태가 드러나야 했다.
+- 객체와 배열을 수정할 때 참조 변경이 명확해야 했다.
+- 모듈은 역할을 기준으로 나뉘어야 했다.
+
+JavaScript를 공부한다는 것은 문법을 하나씩 외우는 일이 아니었다. 화면 뒤에서 코드가 어떤 순서로 움직이고, 어떤 값을 기억하고, 어떤 시점에 다시 실행되는지 이해하는 일이었다.
+
+React와 React Native를 더 잘 쓰기 위해서도 결국 JavaScript로 돌아와야 했다. JavaScript를 이해하는 만큼 화면의 버그를 더 정확히 보고, 상태의 흐름을 더 안정적으로 만들고, 사용자가 느끼는 인터랙션을 더 자연스럽게 설계할 수 있었다.
