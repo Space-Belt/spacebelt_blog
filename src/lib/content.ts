@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import matter from "gray-matter";
 import readingTime from "reading-time";
+import { labs } from "@/lib/labs";
 
 const BLOG_DIR = path.join(process.cwd(), "content", "blog");
 const PROJECT_DIR = path.join(process.cwd(), "content", "projects");
@@ -46,7 +47,7 @@ export type SearchItem = {
   title: string;
   description: string;
   href: string;
-  type: "Blog" | "AI" | "Project";
+  type: "Blog" | "AI" | "Project" | "Lab";
   tags: string[];
 };
 
@@ -165,5 +166,13 @@ export function getSearchItems(): SearchItem[] {
     tags: [project.type, ...project.stack]
   }));
 
-  return [...aiItems, ...blogItems, ...projectItems];
+  const labItems = labs.map((lab) => ({
+    title: lab.title,
+    description: lab.question,
+    href: `/lab/${lab.slug}`,
+    type: "Lab" as const,
+    tags: lab.tags
+  }));
+
+  return [...aiItems, ...blogItems, ...projectItems, ...labItems];
 }

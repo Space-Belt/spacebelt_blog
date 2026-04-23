@@ -21,6 +21,8 @@ const categories: BlogCategory[] = [
   { id: "react", label: "React" },
   { id: "react-native", label: "React Native" },
   { id: "javascript", label: "JavaScript" },
+  { id: "cs", label: "CS" },
+  { id: "network", label: "Network" },
   { id: "troubleshooting", label: "문제 해결" }
 ];
 
@@ -39,6 +41,11 @@ const paths = [
     title: "React Native 앱 구조",
     body: "FlatList, Metro, New Architecture, FCM, 네이티브 광고 식별자까지 앱 개발에 가까운 기록입니다.",
     category: "react-native"
+  },
+  {
+    title: "프론트엔드 CS",
+    body: "콜 스택, 메모리, OS 스케줄링, 네트워크 비용처럼 UI 뒤에서 성능을 결정하는 기반입니다.",
+    category: "cs"
   }
 ];
 
@@ -67,6 +74,8 @@ function getPostCategories(post: BlogListPost) {
 
   if (
     text.includes("javascript") ||
+    text.includes("콜 스택") ||
+    text.includes("메모리") ||
     text.includes("실행컨텍스트") ||
     text.includes("hoisting") ||
     text.includes("스코프") ||
@@ -75,6 +84,33 @@ function getPostCategories(post: BlogListPost) {
     text.includes("dom")
   ) {
     result.add("javascript");
+  }
+
+  if (
+    text.includes("cs") ||
+    text.includes("운영체제") ||
+    text.includes("os") ||
+    text.includes("scheduler") ||
+    text.includes("스케줄러") ||
+    text.includes("메모리") ||
+    text.includes("콜 스택") ||
+    text.includes("frame drop") ||
+    text.includes("프레임 드랍")
+  ) {
+    result.add("cs");
+  }
+
+  if (
+    text.includes("network") ||
+    text.includes("네트워크") ||
+    text.includes("http") ||
+    text.includes("tcp") ||
+    text.includes("cache") ||
+    text.includes("캐시") ||
+    text.includes("cors") ||
+    text.includes("api")
+  ) {
+    result.add("network");
   }
 
   if (

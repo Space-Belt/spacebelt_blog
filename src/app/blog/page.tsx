@@ -8,10 +8,10 @@ export default function BlogPage() {
     <main className="page">
       <section className="shell page-hero">
         <span className="eyebrow">Blog</span>
-        <h1 className="section-title">보여줄 만한 학습 기록만 남깁니다.</h1>
+        <h1 className="section-title">프론트엔드의 동작 원리를 내 언어로 정리합니다.</h1>
         <p className="section-copy">
-          React, React Native, JavaScript 기본기, 실제 문제 해결 기록을 중심으로 정리했습니다.
-          단순 메모보다 개발 역량을 설명할 수 있는 글만 추렸습니다.
+          React, React Native, JavaScript 기본기와 함께 프론트엔드 개발자가 알아야 할 CS, OS,
+          네트워크 지식을 실제 UI 문제와 연결해서 정리합니다.
         </p>
       </section>
       <BlogIndex posts={posts} />
