@@ -1,82 +1,89 @@
 "use client";
 
-import { Float, MeshDistortMaterial, Stars } from "@react-three/drei";
-import { Canvas, useFrame } from "@react-three/fiber";
-import { Suspense, useMemo, useRef } from "react";
-import type { Mesh } from "three";
-import * as THREE from "three";
+import { useEffect, useRef, type CSSProperties } from "react";
 
-function Belt() {
-  const ref = useRef<Mesh>(null);
+const flowItems = ["event", "state", "query", "render", "motion", "log"];
 
-  useFrame(({ clock, pointer }) => {
-    if (!ref.current) return;
-    ref.current.rotation.x = Math.sin(clock.elapsedTime * 0.35) * 0.22 + pointer.y * 0.2;
-    ref.current.rotation.y = clock.elapsedTime * 0.18 + pointer.x * 0.26;
-  });
+const codeLines = [
+  "const flow = createUserExperience();",
+  "sync(api.state, screen.intent);",
+  "render(<ProductInterface />);"
+];
 
-  return (
-    <mesh ref={ref} rotation={[0.7, 0.2, 0.2]}>
-      <torusKnotGeometry args={[1.25, 0.16, 180, 16, 3, 7]} />
-      <MeshDistortMaterial
-        color="#58e0c4"
-        emissive="#184d45"
-        metalness={0.72}
-        roughness={0.2}
-        distort={0.23}
-        speed={1.4}
-      />
-    </mesh>
-  );
-}
-
-function ParticleRibbon() {
-  const points = useMemo(() => {
-    const vertices = [];
-    for (let i = 0; i < 420; i += 1) {
-      const angle = i * 0.15;
-      const radius = 1.9 + Math.sin(i * 0.08) * 0.18;
-      vertices.push(
-        Math.cos(angle) * radius,
-        Math.sin(i * 0.05) * 0.22,
-        Math.sin(angle) * radius
-      );
-    }
-    return new Float32Array(vertices);
-  }, []);
-
-  const ref = useRef<THREE.Points>(null);
-
-  useFrame(({ clock }) => {
-    if (ref.current) ref.current.rotation.y = clock.elapsedTime * 0.12;
-  });
-
-  return (
-    <points ref={ref}>
-      <bufferGeometry>
-        <bufferAttribute attach="attributes-position" args={[points, 3]} />
-      </bufferGeometry>
-      <pointsMaterial size={0.018} color="#f7c948" transparent opacity={0.75} />
-    </points>
-  );
-}
+const signals = ["tap", "scroll", "fetch", "paint"];
 
 export function HeroOrbit() {
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let frame = 0;
+
+    function handlePointerMove(event: PointerEvent) {
+      if (frame) return;
+
+      frame = window.requestAnimationFrame(() => {
+        const x = event.clientX / window.innerWidth;
+        const y = event.clientY / window.innerHeight;
+
+        rootRef.current?.style.setProperty("--pointer-x", `${(x * 100).toFixed(2)}%`);
+        rootRef.current?.style.setProperty("--pointer-y", `${(y * 100).toFixed(2)}%`);
+        rootRef.current?.style.setProperty("--tilt-x", `${((y - 0.5) * -10).toFixed(2)}deg`);
+        rootRef.current?.style.setProperty("--tilt-y", `${((x - 0.5) * 12).toFixed(2)}deg`);
+        frame = 0;
+      });
+    }
+
+    window.addEventListener("pointermove", handlePointerMove);
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      if (frame) window.cancelAnimationFrame(frame);
+    };
+  }, []);
+
   return (
-    <div className="hero-orbit" aria-hidden="true">
-      <Canvas camera={{ position: [0, 0, 5], fov: 48 }} dpr={[1, 1.7]}>
-        <color attach="background" args={["#080a0d"]} />
-        <ambientLight intensity={0.65} />
-        <directionalLight position={[4, 5, 4]} intensity={2.2} color="#ffffff" />
-        <pointLight position={[-3, -2, 3]} intensity={2.4} color="#ff6b6b" />
-        <Suspense fallback={null}>
-          <Float speed={1.4} rotationIntensity={0.35} floatIntensity={0.5}>
-            <Belt />
-            <ParticleRibbon />
-          </Float>
-          <Stars radius={45} depth={30} count={1100} factor={3} saturation={0} fade speed={0.45} />
-        </Suspense>
-      </Canvas>
+    <div className="hero-orbit frontend-hero-visual" ref={rootRef} aria-hidden="true">
+      <div className="cursor-glow" />
+      <div className="visual-grid" />
+      <div className="visual-rail visual-rail-one" />
+      <div className="visual-rail visual-rail-two" />
+      <div className="signal-orbit signal-orbit-one" />
+      <div className="signal-orbit signal-orbit-two" />
+
+      <div className="code-window">
+        <div className="code-window-top">
+          <span />
+          <span />
+          <span />
+        </div>
+        <div className="code-window-body">
+          {codeLines.map((line) => (
+            <code key={line}>{line}</code>
+          ))}
+        </div>
+      </div>
+
+      <div className="interaction-console">
+        {signals.map((signal, index) => (
+          <span style={{ "--delay": `${index * 0.18}s` } as CSSProperties} key={signal}>
+            {signal}
+          </span>
+        ))}
+      </div>
+
+      <div className="flow-board">
+        {flowItems.map((item, index) => (
+          <span style={{ "--delay": `${index * 0.22}s` } as CSSProperties} key={item}>
+            {item}
+          </span>
+        ))}
+      </div>
+
+      <div className="device-frame">
+        <span />
+        <div />
+        <div />
+        <div />
+      </div>
     </div>
   );
 }

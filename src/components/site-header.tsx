@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { Code2 } from "lucide-react";
 import { SiteSearch } from "@/components/site-search";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { getSearchItems } from "@/lib/content";
 
 const nav = [
@@ -7,7 +9,7 @@ const nav = [
   { href: "/blog", label: "Blog" },
   { href: "/ai", label: "AI" },
   { href: "/lab", label: "Lab" },
-  { href: "/about", label: "About" }
+  { href: "/games", label: "Games" }
 ];
 
 export function SiteHeader() {
@@ -26,7 +28,20 @@ export function SiteHeader() {
           </Link>
         ))}
       </nav>
-      <SiteSearch items={searchItems} />
+      <div className="header-actions">
+        <a
+          className="github-link"
+          href="https://github.com/Space-Belt"
+          target="_blank"
+          rel="noreferrer"
+          aria-label="GitHub profile"
+          title="GitHub"
+        >
+          <Code2 size={17} />
+        </a>
+        <ThemeToggle />
+        <SiteSearch items={searchItems} />
+      </div>
     </header>
   );
 }
