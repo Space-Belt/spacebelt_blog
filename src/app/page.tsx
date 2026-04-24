@@ -341,8 +341,8 @@ export default function Home() {
           <Link className="button" href="/projects">
             작업 확인하기 <ArrowRight size={18} />
           </Link>
-          <Link className="button secondary" href="/lab">
-            실험 보기
+          <Link className="button secondary" href="/blog">
+            글 보러가기
           </Link>
         </div>
       </MotionSection>
