@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Code2 } from "lucide-react";
 import { SiteSearch } from "@/components/site-search";
+import { SpacebeltLogo } from "@/components/spacebelt-logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { getSearchItems } from "@/lib/content";
 
@@ -17,8 +18,10 @@ export function SiteHeader() {
   return (
     <header className="site-header">
       <Link className="brand" href="/">
-        <span className="brand-mark" />
-        spacebelt
+        <span className="brand-mark" aria-hidden="true">
+          <SpacebeltLogo />
+        </span>
+        <span className="brand-text">SpaceBelt</span>
       </Link>
       <nav aria-label="Main navigation">
         {nav.map((item) => (

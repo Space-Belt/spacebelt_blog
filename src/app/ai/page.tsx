@@ -1,5 +1,16 @@
 import Link from "next/link";
-import { ArrowRight, Bot, BrainCircuit, Code2, FileSearch, Workflow } from "lucide-react";
+import {
+  ArrowRight,
+  Bot,
+  BrainCircuit,
+  Code2,
+  Database,
+  FileSearch,
+  GitBranch,
+  ShieldCheck,
+  Sparkles,
+  Workflow
+} from "lucide-react";
 import { getAiPosts } from "@/lib/content";
 
 const practices = [
@@ -25,7 +36,58 @@ const practices = [
   }
 ];
 
-const tracks = ["Codex", "Claude Code", "Context", "MCP", "Skills", "Code Review", "Docs", "Automation"];
+const tracks = [
+  "Codex",
+  "Claude Code",
+  "RAG",
+  "Context",
+  "MCP",
+  "Skills",
+  "Code Review",
+  "Automation"
+];
+
+const systemMap = [
+  {
+    icon: BrainCircuit,
+    label: "Intent",
+    title: "무엇을 끝낼지 먼저 정한다",
+    body: "AI가 추측하지 않도록 목표, 범위, 완료 기준을 작은 작업 명세로 바꿉니다."
+  },
+  {
+    icon: Database,
+    label: "Context",
+    title: "필요한 근거만 붙인다",
+    body: "관련 파일, 에러 로그, 공식 문서, 디자인 기준처럼 이번 판단에 필요한 정보만 고릅니다."
+  },
+  {
+    icon: GitBranch,
+    label: "Draft",
+    title: "후보를 빠르게 만든다",
+    body: "구현안, 테스트 관점, 리팩터링 방향을 여러 개 뽑고 프로젝트 기준으로 비교합니다."
+  },
+  {
+    icon: ShieldCheck,
+    label: "Verify",
+    title: "실행해서 남길 것만 고른다",
+    body: "diff, 빌드, 테스트, 화면 동작을 확인해 AI 답변을 실제 코드 품질로 바꿉니다."
+  }
+];
+
+const productivityLoops = [
+  {
+    title: "RAG",
+    body: "AI가 기억만으로 답하지 않고, 문서나 코드 조각을 검색해 근거와 함께 답하게 만드는 방식입니다."
+  },
+  {
+    title: "MCP",
+    body: "Figma, 공식 문서, 브라우저, 로그 도구처럼 repo 밖의 정보를 AI가 읽을 수 있게 연결합니다."
+  },
+  {
+    title: "Skills",
+    body: "반복되는 글쓰기, 리뷰, 디버깅 절차를 레시피로 저장해 매번 같은 설명을 줄입니다."
+  }
+];
 
 export default function AiPage() {
   const posts = getAiPosts();
@@ -60,6 +122,38 @@ export default function AiPage() {
         <div>
           <strong>03</strong>
           <span>배운 내용을 글과 데모로 남기기</span>
+        </div>
+      </section>
+
+      <section className="shell section-block ai-system-section">
+        <span className="eyebrow">AI Productivity Map</span>
+        <div className="section-head">
+          <h2 className="section-title">AI는 답변기가 아니라 작업 흐름에 넣을 때 생산성이 올라갑니다.</h2>
+          <Link href="/ai/ai-productivity-rag-mental-model">활용법 글 읽기</Link>
+        </div>
+        <div className="ai-system-map">
+          {systemMap.map((item) => (
+            <article className="ai-map-card" key={item.title}>
+              <div>
+                <item.icon size={24} />
+                <span>{item.label}</span>
+              </div>
+              <h3>{item.title}</h3>
+              <p>{item.body}</p>
+            </article>
+          ))}
+        </div>
+        <div className="ai-loop-strip" aria-label="AI productivity concepts">
+          <div className="ai-loop-lead">
+            <Sparkles size={24} />
+            <strong>Context를 고르고, 도구를 연결하고, 반복 작업을 저장합니다.</strong>
+          </div>
+          {productivityLoops.map((item) => (
+            <article key={item.title}>
+              <span>{item.title}</span>
+              <p>{item.body}</p>
+            </article>
+          ))}
         </div>
       </section>
 

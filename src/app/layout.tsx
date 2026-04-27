@@ -5,6 +5,11 @@ import { SiteHeader } from "@/components/site-header";
 export const metadata: Metadata = {
   title: "Spacebelt Blog | Frontend Portfolio",
   description: "React, React Native, animation, and interface engineering portfolio.",
+  icons: {
+    icon: "/favicon.svg",
+    shortcut: "/favicon.svg",
+    apple: "/favicon.svg"
+  },
   openGraph: {
     title: "Spacebelt Blog",
     description: "Frontend portfolio and technical writing archive.",

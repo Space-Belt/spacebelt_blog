@@ -1,10 +1,14 @@
 import Link from "next/link";
 import {
   ArrowRight,
+  Bot,
   Braces,
   Code2,
+  Database,
   FileText,
+  GitBranch,
   MessageSquareText,
+  ShieldCheck,
   Smartphone,
   TerminalSquare
 } from "lucide-react";
@@ -73,19 +77,37 @@ const stackGroups = [
 
 const workflowSteps = [
   {
-    label: "Read",
-    title: "문맥 수집",
-    body: "관련 파일, 기존 패턴, 실패 로그를 먼저 읽고 AI에게 줄 문제 범위를 좁힙니다."
+    label: "Define",
+    title: "작업 명세화",
+    body: "목표, 관련 파일, 제약, 완료 기준을 먼저 정리해 AI가 추측할 여지를 줄입니다."
   },
   {
-    label: "Draft",
-    title: "후보 생성",
-    body: "구현안, 테스트 관점, 리팩터링 범위를 빠르게 뽑되 바로 병합하지 않습니다."
+    label: "Ground",
+    title: "근거 연결",
+    body: "코드베이스, 공식 문서, 디자인 기준, 에러 로그를 context로 붙여 답변의 기준을 세웁니다."
   },
   {
     label: "Verify",
-    title: "직접 검증",
-    body: "diff, 빌드, 화면 동작, 문서를 확인해서 남길 코드만 선택합니다."
+    title: "검증 후 반영",
+    body: "diff, 타입, 빌드, 화면 흐름을 확인해 실제로 남길 코드와 버릴 초안을 나눕니다."
+  }
+];
+
+const aiCapabilities = [
+  {
+    icon: Database,
+    title: "RAG / Context",
+    body: "기억에만 의존하지 않고 필요한 문서와 코드 근거를 붙여 답변 품질을 높입니다."
+  },
+  {
+    icon: GitBranch,
+    title: "Agentic Coding",
+    body: "코드 탐색, 수정, 테스트 실행을 작은 단위로 맡기고 변경 범위를 직접 관리합니다."
+  },
+  {
+    icon: ShieldCheck,
+    title: "Review Loop",
+    body: "AI 결과를 바로 믿지 않고 diff와 실행 결과로 검증해 제품 기준에 맞게 다듬습니다."
   }
 ];
 
@@ -289,11 +311,24 @@ export default function Home() {
         <div className="shell home-ai-panel">
           <div className="ai-workflow-copy">
             <span className="eyebrow">AI Workflow</span>
-            <h2>AI 도구는 구현 속도를 높이고, 판단은 직접 검증합니다.</h2>
+            <h2>AI를 코드 생성기가 아니라 개발 프로세스의 보조 엔진으로 씁니다.</h2>
             <p>
-              Codex와 Claude Code를 코드 읽기, 구현 후보 비교, 테스트 초안 작성에 사용합니다.
-              결과는 diff, 빌드, 문서, 실제 화면으로 다시 확인합니다.
+              Codex와 Claude Code를 코드 읽기, 구현 후보 비교, 테스트 초안 작성, 글 구조화에
+              사용합니다. RAG, MCP, Skills 같은 개념은 필요한 순간에만 붙이고, 최종 판단은
+              검증 가능한 근거로 남깁니다.
             </p>
+            <div className="ai-capability-grid" aria-label="AI capabilities">
+              {aiCapabilities.map((item) => (
+                <article key={item.title}>
+                  <item.icon size={20} />
+                  <strong>{item.title}</strong>
+                  <p>{item.body}</p>
+                </article>
+              ))}
+            </div>
+            <Link className="button secondary ai-workflow-link" href="/ai">
+              AI 활용 기록 보기 <Bot size={18} />
+            </Link>
           </div>
           <div className="ai-workflow-steps" aria-label="AI workflow steps">
             {workflowSteps.map((step, index) => (
