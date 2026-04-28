@@ -3,11 +3,11 @@ import { ArrowRight, Bot, CheckCircle2, Database, GitBranch, ShieldCheck } from 
 import { getAiPosts, getBlogPosts, getProjects } from "@/lib/content";
 
 const principles = [
-  "화면을 만들기 전에 필요한 상태와 데이터 흐름을 먼저 정리합니다.",
-  "React Native에서 네이티브 설정이 필요한 부분도 하나씩 확인하며 작업합니다.",
+  "제품에서 해결해야 할 문제와 사용자 흐름을 먼저 정리합니다.",
+  "화면, 상태, 데이터, 운영 흐름이 끊기지 않도록 기능을 연결합니다.",
+  "React Native에서 네이티브 설정과 빌드 환경까지 확인하며 작업합니다.",
   "AI에게 맡길 일은 목표, context, 제약, 완료 기준으로 나누어 전달합니다.",
-  "기능을 구현한 뒤에는 로그, 빌드, 실제 화면으로 다시 확인합니다.",
-  "막혔던 문제와 공부한 내용은 나중에 다시 보기 위해 글로 남깁니다."
+  "생성된 결과는 diff, 빌드, 실제 화면으로 검증한 뒤 반영합니다."
 ];
 
 const stackGroups = [
@@ -59,10 +59,11 @@ export default function AboutPage() {
       <section className="shell about-hero">
         <div>
           <span className="eyebrow">About</span>
-          <h1 className="section-title">React Native와 React로 앱과 웹을 만들어온 개발자.</h1>
+          <h1 className="section-title">제품 개발의 흐름을 이해하는 프론트엔드 개발자.</h1>
           <p className="section-copy">
-            앱, 웹, 관리자 화면을 작업하면서 인증, 게시판, OCR, FCM, Analytics, 네이티브 모듈을
-            경험했습니다. 아직 더 배울 것이 많지만, 맡은 기능을 끝까지 확인하고 기록하려고 합니다.
+            React Native와 React 기반으로 모바일 앱, 관리자 웹, 서비스 화면을 개발했습니다.
+            기획부터 개발, 배포, 운영까지 이어지는 흐름 안에서 맡은 기능을 구현하고, AI 도구를
+            활용해 문제 해결 속도와 검증의 정확도를 높이고 있습니다.
           </p>
           <div className="hero-actions">
             <Link className="button" href="/projects">
@@ -100,9 +101,9 @@ export default function AboutPage() {
           <span className="eyebrow">Now</span>
           <h2>AI를 작업 흐름에 넣는 법.</h2>
           <p>
-            FETE, EVAN, 똑구, OPENME처럼 앱 기능이 중심인 프로젝트를 정리하면서 Codex와
-            Claude Code를 함께 사용합니다. 단순히 코드를 생성하는 용도가 아니라, 코드베이스 탐색,
-            구현 후보 비교, 테스트 관점 정리, 기술 글 초안화에 활용합니다.
+            AI 도구를 단순한 코드 생성기가 아니라, 문제 분석과 구현 방향 비교, 코드 작성, 리뷰
+            후보 도출, 학습 리소스 정리에 활용합니다. 결과는 그대로 받아들이지 않고 코드와 화면,
+            빌드 결과를 기준으로 다시 검증합니다.
           </p>
         </div>
       </section>

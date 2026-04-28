@@ -22,41 +22,41 @@ import { getAiPosts, getBlogPosts, getProjects, getSearchItems } from "@/lib/con
 const strengths = [
   {
     icon: Braces,
-    title: "JavaScript 기반 화면 구현",
-    body: "React와 React Native에서 화면, 상태, API 응답이 하나의 사용자 흐름으로 이어지도록 구현합니다."
+    title: "제품 흐름을 고려한 화면 구현",
+    body: "기획 의도를 화면, 상태, API 응답, 사용자 행동으로 연결해 실제 서비스 흐름 안에서 동작하게 만듭니다."
   },
   {
     icon: Smartphone,
-    title: "웹과 앱의 사용 경험 연결",
-    body: "웹 UI와 모바일 앱 인터랙션을 함께 다루며, 사용자가 느끼는 지연과 불편함을 줄이는 방향으로 생각합니다."
+    title: "React Native와 웹을 함께 다루는 개발",
+    body: "Expo와 React Native CLI 앱, 관리자 웹, 서비스형 웹까지 넘나들며 필요한 기능을 끝까지 연결합니다."
   },
   {
     icon: MessageSquareText,
-    title: "원인을 설명하는 기록",
-    body: "막힌 문제를 해결에서 끝내지 않고, 왜 발생했고 어떤 구조로 풀었는지 다시 설명할 수 있게 글로 남깁니다."
+    title: "AI를 활용한 속도와 검증",
+    body: "Codex, Claude Code, RAG, MCP를 작업 흐름에 넣고 결과는 diff, 빌드, 화면으로 다시 확인합니다."
   }
 ];
 
-const identityTags = ["React", "React Native", "JavaScript", "TypeScript", "Next.js"];
+const identityTags = ["React Native", "React", "TypeScript", "AI-assisted Dev", "Product"];
 
 const experience = [
   {
     period: "Frontend",
-    title: "화면과 데이터 흐름을 함께 설계",
-    body: "사용자 액션이 상태 변경, API 요청, 렌더링 결과로 이어지는 과정을 분리해서 보고, 화면이 왜 그렇게 동작하는지 설명 가능한 구조로 구현하려고 합니다.",
-    tags: ["React", "React Native", "TypeScript", "State"]
+    title: "제품 맥락 안에서 화면을 구현",
+    body: "자사 서비스와 커머스, 구독 관리, 이벤트 플랫폼을 다루며 화면 구현을 상태, 데이터, 운영 흐름과 함께 봅니다.",
+    tags: ["React", "React Native", "TypeScript", "Product"]
   },
   {
     period: "Product Work",
-    title: "프로젝트에서 맡은 기능을 끝까지 연결",
-    body: "OCR 영수증 분석, Analytics 이벤트, 입장 인증, 제스처 인터랙션처럼 특정 기능이 실제 사용 흐름에 들어가는 과정을 다뤘습니다.",
-    tags: ["OCR", "Analytics", "Gesture", "Admin Web"]
+    title: "기능을 배포와 운영까지 연결",
+    body: "OCR 영수증 분석, 행동 데이터 추적, 관리자 웹, 입장 인증, 네이티브 모듈처럼 서비스 운영에 필요한 기능을 구현했습니다.",
+    tags: ["OCR", "Analytics", "Admin Web", "Native Module"]
   },
   {
-    period: "Learning Archive",
-    title: "JavaScript와 CS 기본기를 화면 문제로 연결",
-    body: "실행 컨텍스트, 렌더링 비용, OS 스케줄링, HTTP 캐시처럼 프론트엔드 품질에 영향을 주는 기반 지식을 글로 정리합니다.",
-    tags: ["JavaScript", "CS", "Network", "MDX"]
+    period: "AI Workflow",
+    title: "AI 도구를 개발 과정에 통합",
+    body: "문제 분석, 구현 후보 비교, 코드 작성, 리뷰, 학습 리소스 정리에 AI를 활용하고 직접 검증하는 흐름을 만듭니다.",
+    tags: ["Codex", "Claude Code", "RAG", "Review"]
   }
 ];
 
@@ -124,11 +124,11 @@ export default function Home() {
         <div className="shell home-hero-grid">
           <div className="home-hero-copy">
             <span className="eyebrow">Frontend Developer / JavaScript Ecosystem</span>
-            <h1>Zero 불편함을 향해, 화면의 완성도를 설계하는 프론트엔드 개발자.</h1>
+            <h1>제품 흐름을 이해하고 구현하는 프론트엔드 개발자.</h1>
             <p>
-              좋은 프론트엔드는 사용자가 망설이는 순간을 줄이고, 기다림마저 자연스러운 흐름으로
-              바꾸는 일이라고 생각합니다. React와 React Native로 웹과 앱의 화면, 상태,
-              인터랙션을 연결하며 제품의 사용감을 끝까지 다듬습니다.
+              React Native와 React 기반으로 모바일 앱, 관리자 웹, 서비스 화면을 개발합니다. 제품
+              기획부터 개발, 배포, 운영까지 이어지는 흐름을 경험했고, AI 도구를 개발 과정에
+              적극적으로 활용해 문제 해결 속도와 결과의 정확도를 높이고 있습니다.
             </p>
             <div className="identity-strip" aria-label="Developer focus">
               {identityTags.map((tag) => (
