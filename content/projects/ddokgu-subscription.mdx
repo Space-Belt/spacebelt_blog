@@ -1,30 +1,182 @@
 ---
 title: "똑구"
-summary: "구독 관리 서비스에서 OCR/AI 기반 영수증 분석과 행동 데이터 추적을 구현한 운영 중 프로젝트입니다."
-type: "React Native Expo / Web"
+summary: "여러 구독 서비스를 한곳에서 관리하고 결제일, 월 구독료, 알림을 확인할 수 있는 React Native 앱입니다."
+type: "Expo / React Native"
 date: "2025-08-01"
-cover: "https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&fit=crop&w=1400&q=80"
-stack: ["React Native", "Expo", "OCR", "AI Analysis", "Mixpanel", "Firebase Analytics"]
-role: "구독 관리 서비스 앱/웹 프론트엔드, OCR/AI 분석 기능, 행동 데이터 추적 구현"
-impact: ["OCR/AI 기반 영수증 분석", "Mixpanel과 Firebase Analytics 이벤트 추적", "구독 관리 사용자 흐름 구현"]
+cover: "/projects/ddokgu/dashboard-home.png"
+logo: "/projects/ddokgu/logo.png"
+heroImages: ["/projects/ddokgu/landing.png", "/projects/ddokgu/dashboard-home.png", "/projects/ddokgu/notifications.png"]
+heroLabel: "구독 결제 관리 앱"
+stack: ["Expo SDK 53", "React Native 0.79", "React 19", "TypeScript", "React Query", "Zustand", "Firebase Analytics", "Mixpanel"]
+role: "구독 관리 앱 프론트엔드 전반 구현"
+impact: ["소셜 로그인과 401 자동 로그아웃 흐름 정리", "구독 결제일 대시보드와 알림 UX 개선", "푸시 토큰 등록 안정화와 온보딩 반응형 대응"]
 ---
 
 ## 프로젝트 개요
 
-똑구는 사용자의 구독 정보를 관리하는 서비스입니다. 앱과 웹 프론트엔드 화면을 담당했고, 영수증을 분석해 구독 정보를 연결하는 OCR/AI 기반 기능과 사용자 행동 데이터 추적을 구현했습니다.
+똑구는 사용자가 이용 중인 여러 구독 서비스를 한곳에서 관리하는 앱입니다. 구독 서비스 등록, 월 구독료 확인, 결제일 대시보드, 알림함, 마이페이지를 통해 반복 결제를 놓치지 않도록 돕는 구조로 만들었습니다.
+
+Expo와 React Native 기반으로 iOS/Android 앱 화면을 구현했고, 인증, 구독 등록, 대시보드, 알림처럼 사용자가 실제로 이동하는 주요 프론트엔드 흐름을 연결했습니다.
+
+<div className="project-showcase project-showcase-feature">
+  <figure>
+    <img src="/projects/ddokgu/landing.png" alt="똑구 랜딩 화면" />
+    <figcaption>서비스 첫 진입 화면</figcaption>
+  </figure>
+  <figure>
+    <img src="/projects/ddokgu/login.png" alt="똑구 로그인 화면" />
+    <figcaption>소셜 로그인 화면</figcaption>
+  </figure>
+  <figure>
+    <img src="/projects/ddokgu/dashboard-home.png" alt="똑구 대시보드 화면" />
+    <figcaption>결제일 중심 대시보드</figcaption>
+  </figure>
+</div>
 
 ## 맡은 부분
 
-React Native Expo 기반 앱과 웹 화면을 작업했습니다. OCR로 영수증 정보를 읽고 AI 분석 결과를 서비스 데이터와 연결하는 흐름을 구성했으며, Mixpanel과 Firebase Analytics로 주요 행동 이벤트를 추적할 수 있게 정리했습니다.
+앱 프론트엔드 전반을 담당했습니다. 소셜 로그인, 구독 서비스 등록/수정/삭제, 결제일 대시보드, 알림함, 온보딩, 푸시 알림, 마이페이지까지 주요 화면과 사용자 흐름을 구현했습니다.
+
+<Callout>
+React Query는 서버 상태 관리에 집중시키고, Zustand는 UI 상태처럼 앱 내부에서만 필요한 상태에 한정해 사용했습니다.
+</Callout>
+
+<div className="metric-grid">
+  <Metric label="주요 담당 영역" value="앱 프론트엔드 전반" />
+  <Metric label="상태 관리 기준" value="서버/UI 상태 분리" />
+  <Metric label="구현 범위" value="인증부터 알림까지" />
+</div>
+
+## 기술 스택과 구조
+
+- Expo SDK 53, React Native 0.79, React 19, TypeScript
+- Expo 기반 iOS/Android 앱 화면 구현
+- React Query 기반 서버 상태 관리
+- Zustand 기반 UI 상태 관리
+- React Navigation 기반 화면 전환
+- Firebase Analytics, Mixpanel 행동 데이터 추적
+- SecureStore 기반 토큰 저장
+- 공용 API client에서 401 응답 처리 통합
 
 ## 구현 포인트
 
-- OCR/AI 기반 영수증 분석 흐름
-- 구독 관리 화면
-- Mixpanel 이벤트 추적
-- Firebase Analytics 행동 데이터 기록
-- 앱과 웹의 화면 흐름 정리
+### 인증 흐름
+
+카카오, 구글, 네이버 소셜 로그인을 앱 흐름에 맞게 연결했습니다. 로그인 후 발급받은 토큰은 SecureStore에 저장했고, API 요청 중 401 응답이 내려오면 공용 API client에서 자동 로그아웃 처리를 수행하도록 정리했습니다.
+
+네이버 로그인은 SDK 방식에서 OIDC Authorization Code Flow로 개선했습니다. 앱에서 authorization code를 확보한 뒤 accessToken과 idToken을 백엔드에 전달하는 구조로 바꾸면서, 콜백 URL과 idToken 확보 문제를 함께 해결했습니다.
+
+### 구독 등록 흐름
+
+사용자가 서비스명을 검색하고 구독 정보를 입력하는 수기 등록 흐름을 구현했습니다. 첫 사용자가 등록 기능을 바로 이해할 수 있도록 온보딩 화면을 두고, 검색 결과 선택 이후 정보 입력으로 자연스럽게 이어지도록 화면 단계를 나눴습니다.
+
+<div className="project-showcase">
+  <figure>
+    <img src="/projects/ddokgu/register-onboarding.png" alt="구독 등록 온보딩 화면" />
+    <figcaption>등록 전 온보딩</figcaption>
+  </figure>
+  <figure>
+    <img src="/projects/ddokgu/register-search.png" alt="구독 서비스 검색 화면" />
+    <figcaption>구독 서비스 검색</figcaption>
+  </figure>
+  <figure>
+    <img src="/projects/ddokgu/register-form.png" alt="구독 정보 입력 화면" />
+    <figcaption>구독 정보 입력</figcaption>
+  </figure>
+</div>
+
+영수증이나 결제 내역 이미지를 선택해 등록을 보조하는 OCR 화면도 함께 다뤘습니다. 사진 선택, 분석 중, 결과 확인의 상태를 분리해 사용자가 현재 진행 단계를 놓치지 않도록 구성했습니다.
+
+<div className="project-showcase">
+  <figure>
+    <img src="/projects/ddokgu/ocr-select.png" alt="OCR 사진 선택 화면" />
+    <figcaption>사진 선택</figcaption>
+  </figure>
+  <figure>
+    <img src="/projects/ddokgu/ocr-loading.png" alt="OCR 로딩 화면" />
+    <figcaption>분석 진행 상태</figcaption>
+  </figure>
+  <figure>
+    <img src="/projects/ddokgu/ocr-result.png" alt="OCR 결과 화면" />
+    <figcaption>분석 결과 확인</figcaption>
+  </figure>
+</div>
+
+### 푸시 알림
+
+Expo push token을 발급받아 `/v1/users/me/devices`로 등록하는 흐름을 구현했습니다. 토큰이 아직 준비되지 않은 상태에서 빈 토큰이 서버로 전송될 수 있는 가능성을 제거해, 디바이스 등록 요청의 안정성을 높였습니다.
+
+### 대시보드
+
+결제일이 가까운 구독 서비스를 먼저 확인할 수 있도록 리스트를 구성했습니다. 구독 서비스가 5개를 초과하면 더보기/접기로 전환되며, height animation을 적용해 리스트가 갑자기 튀지 않고 자연스럽게 확장되도록 만들었습니다.
+
+월 구독료 확인 카드, 소비 분석 카드, 결제일 D-day 배지, 무제한 배지처럼 구독 관리 앱에서 사용자가 자주 확인하는 정보를 빠르게 읽을 수 있도록 UI 밀도를 조정했습니다.
+
+<div className="project-showcase">
+  <figure>
+    <img src="/projects/ddokgu/dashboard-fee.png" alt="대시보드 구독료 확인 화면" />
+    <figcaption>이번 달 구독료 요약</figcaption>
+  </figure>
+  <figure>
+    <img src="/projects/ddokgu/dashboard-analysis.png" alt="대시보드 구독 소비 분석 화면" />
+    <figcaption>소비 분석 카드</figcaption>
+  </figure>
+  <figure>
+    <img src="/projects/ddokgu/subscription-fee.png" alt="구독료 확인 상세 화면" />
+    <figcaption>구독료 상세 확인</figcaption>
+  </figure>
+</div>
+
+<div className="project-showcase">
+  <figure>
+    <img src="/projects/ddokgu/subscription-analysis.png" alt="구독 분석 상세 화면" />
+    <figcaption>구독 분석 상세</figcaption>
+  </figure>
+  <figure>
+    <img src="/projects/ddokgu/tendency-landing.png" alt="구독 성향 테스트 랜딩 화면" />
+    <figcaption>성향 테스트 진입</figcaption>
+  </figure>
+  <figure>
+    <img src="/projects/ddokgu/tendency-result.png" alt="구독 성향 테스트 결과 화면" />
+    <figcaption>성향 테스트 결과</figcaption>
+  </figure>
+</div>
+
+### 온보딩과 빈 상태
+
+Figma 기준 이미지를 반영해 온보딩 1, 2, 3 화면을 구성했습니다. 기기 크기별 반응형 레이아웃을 적용했고, 작은 화면인 iPhone SE에서도 이미지와 버튼이 겹치지 않도록 대응했습니다.
+
+알림함은 알림이 없을 때 빈 화면이 어색하게 보이지 않도록 `ListEmptyComponent` 기반의 empty state를 추가했습니다. 빈 상태 UI도 실제 기능 흐름의 일부로 보고, 사용자가 다음 행동을 이해할 수 있게 정리했습니다.
+
+<div className="project-showcase project-showcase-compact">
+  <figure>
+    <img src="/projects/ddokgu/notifications.png" alt="똑구 알림함 화면" />
+    <figcaption>알림함</figcaption>
+  </figure>
+  <figure>
+    <img src="/projects/ddokgu/push-notification.jpeg" alt="푸시 알림이 알림함에 담긴 화면" />
+    <figcaption>푸시 알림 연동 결과</figcaption>
+  </figure>
+</div>
+
+### 마이페이지
+
+마이페이지에는 관리자 문의 모달을 추가했습니다. 제목, 내용, 사진 첨부 UI를 제공해 사용자가 앱 안에서 바로 문의 내용을 작성할 수 있도록 구성했습니다.
+
+## 트러블슈팅
+
+- 네이버 로그인 Callback URL 설정 문제
+- 네이버 로그인에서 idToken을 안정적으로 확보하는 문제
+- iOS native module 빌드 문제
+- ATS 설정과 Metro 연결 이슈
+- Expo push token 발급 타이밍 문제
+
+## 협업하며 개선한 점
+
+PR 리뷰를 반영하면서 공용 컴포넌트의 변경 범위를 줄이고, 각 화면 컴포넌트가 맡는 책임을 분리하는 방향으로 수정했습니다. 공통 API client, 인증 처리, 서버 상태 관리처럼 여러 화면에 영향을 주는 부분은 한곳에서 처리되도록 정리해 유지보수 부담을 줄였습니다.
 
 ## 배운 점
 
-기능을 구현하는 것과 사용자가 실제로 어떻게 쓰는지 확인하는 일은 달랐습니다. 분석 기능과 행동 데이터 추적을 함께 붙이면서 화면 구현 이후의 운영 판단 기준까지 고려하게 되었습니다.
+React Native 앱은 화면 구현만으로 끝나지 않았습니다. 소셜 로그인, SecureStore, 푸시 토큰, API 예외 처리, 작은 기기 대응까지 모두 연결되어야 실제 사용 가능한 앱이 되었습니다.
+
+특히 인증과 푸시 알림처럼 앱 바깥의 플랫폼 정책과 백엔드 계약이 맞물리는 기능은, UI보다 흐름의 안정성이 더 중요했습니다. 이번 프로젝트를 통해 서버 상태와 UI 상태를 분리하고, 공통 client에서 예외 흐름을 처리하는 구조가 앱 유지보수에 얼마나 중요한지 확인했습니다.
