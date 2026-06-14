@@ -24,6 +24,9 @@ export type Project = {
   type: string;
   date: string;
   cover: string;
+  logo?: string;
+  heroImages?: string[];
+  heroLabel?: string;
   stack: string[];
   role: string;
   impact: string[];

@@ -32,6 +32,11 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
       <section className="shell detail-hero">
         <div>
           <span className="eyebrow">{project.type}</span>
+          {project.logo ? (
+            <div className="detail-logo">
+              <Image src={project.logo} alt={`${project.title} logo`} width={88} height={88} />
+            </div>
+          ) : null}
           <h1>{project.title}</h1>
           <p>{project.summary}</p>
           <div className="tag-row">
@@ -42,9 +47,35 @@ export default async function ProjectDetailPage({ params }: ProjectDetailPagePro
             ))}
           </div>
         </div>
-        <div className="detail-cover card">
-          <Image src={project.cover} alt="" fill sizes="(max-width: 900px) 100vw, 42vw" />
-        </div>
+        {project.heroImages?.length ? (
+          <div className="detail-app-preview card">
+            <div className="detail-app-brand">
+              {project.logo ? (
+                <span>
+                  <Image src={project.logo} alt={`${project.title} logo`} width={72} height={72} />
+                </span>
+              ) : null}
+              <strong>{project.title}</strong>
+              <small>{project.heroLabel ?? project.type}</small>
+            </div>
+            <div className="detail-phone-stack">
+              {project.heroImages.slice(0, 3).map((image, index) => (
+                <div className="detail-phone" key={image} data-index={index}>
+                  <Image
+                    src={image}
+                    alt={`${project.title} app screen ${index + 1}`}
+                    fill
+                    sizes="(max-width: 900px) 38vw, 160px"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="detail-cover card">
+            <Image src={project.cover} alt="" fill sizes="(max-width: 900px) 100vw, 42vw" />
+          </div>
+        )}
       </section>
       <section className="shell detail-layout">
         <aside className="detail-aside">

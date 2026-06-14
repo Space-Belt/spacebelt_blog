@@ -8,6 +8,11 @@ export function ProjectCard({ project }: { project: Project }) {
     <Link className="project-card card" href={`/projects/${encodeURIComponent(project.slug)}`}>
       <div className="project-image">
         <Image src={project.cover} alt="" fill sizes="(max-width: 720px) 100vw, 50vw" />
+        {project.logo ? (
+          <span className="project-logo-badge">
+            <Image src={project.logo} alt={`${project.title} logo`} width={62} height={62} />
+          </span>
+        ) : null}
       </div>
       <div className="project-card-body">
         <div className="project-card-top">
