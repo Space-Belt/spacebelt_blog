@@ -1,0 +1,161 @@
+---
+title: "INP를 기준으로 메인 스레드 병목 줄이기"
+description: "Interaction to Next Paint 관점에서 긴 JavaScript 작업, 렌더링 지연, yielding, Web Worker 분리를 어떻게 판단하는지 정리합니다."
+date: "2026-06-24"
+tags: ["Performance", "Browser", "Frontend"]
+---
+
+## 빠른 페이지와 반응이 좋은 페이지는 다르다
+
+페이지가 빨리 뜨는 것과 사용자의 입력에 빠르게 반응하는 것은 다른 문제다. Lighthouse 점수가 괜찮아도 버튼을 눌렀을 때 한 박자 늦거나, 검색어 입력이 끊기거나, 탭 전환이 답답할 수 있다.
+
+이런 문제를 볼 때 중요한 지표 중 하나가 INP다. INP는 Interaction to Next Paint의 약자로, 사용자의 클릭, 탭, 키 입력 같은 상호작용이 다음 화면 업데이트로 이어지기까지 걸린 시간을 본다.
+
+프론트엔드에서 INP를 신경 쓴다는 것은 단순히 "코드를 빠르게 짠다"가 아니다. 사용자의 입력이 들어왔을 때 메인 스레드가 그 입력을 처리하고, 화면을 다시 그릴 시간을 확보해주는 일에 가깝다.
+
+## 메인 스레드는 생각보다 바쁘다
+
+브라우저의 메인 스레드는 여러 일을 한다.
+
+- JavaScript 실행
+- 스타일 계산
+- layout
+- paint 준비
+- 이벤트 핸들러 실행
+- React 렌더링
+
+이 중 하나가 오래 걸리면 다른 작업이 기다린다. 예를 들어 사용자가 버튼을 눌렀는데, 메인 스레드가 이미 큰 JSON 파싱이나 긴 배열 계산을 하고 있다면 클릭 핸들러 실행 자체가 늦어진다.
+
+```ts
+button.addEventListener("click", () => {
+  const result = hugeList
+    .map(expensiveNormalize)
+    .filter(expensivePredicate)
+    .sort(expensiveCompare);
+
+  render(result);
+});
+```
+
+이 코드는 클릭 이벤트 안에서 모든 일을 한 번에 처리한다. 데이터가 작을 때는 문제없지만, 데이터가 커지면 클릭 이후 다음 paint까지 오래 걸릴 수 있다.
+
+## INP 지연은 세 구간으로 나눠서 본다
+
+입력 반응 지연은 크게 세 부분으로 나눠서 볼 수 있다.
+
+1. input delay: 사용자가 입력했지만 이벤트 핸들러가 시작되기까지 기다린 시간
+2. processing time: 이벤트 핸들러와 그로 인해 실행된 JavaScript 시간
+3. presentation delay: 처리는 끝났지만 다음 paint까지 걸린 시간
+
+이 구분이 중요하다. 셋은 해결 방법이 다르기 때문이다.
+
+input delay가 길면 이미 메인 스레드를 막고 있는 긴 task가 있을 수 있다. processing time이 길면 핸들러 안의 계산이나 React 업데이트가 비쌀 수 있다. presentation delay가 길면 DOM 변경, layout, paint 비용이 클 수 있다.
+
+Chrome DevTools Performance 탭에서 interaction을 기록하면 긴 task, style recalculation, layout, paint가 어느 시점에 몰리는지 볼 수 있다. 성능 문제는 느낌보다 타임라인으로 보는 편이 훨씬 정확하다.
+
+## 긴 작업은 쪼개서 브라우저에 숨 쉴 시간을 준다
+
+한 번에 오래 실행되는 JavaScript는 메인 스레드를 붙잡는다. 작업을 여러 조각으로 나누고 중간에 브라우저가 입력과 렌더링을 처리할 기회를 주면 반응성이 좋아질 수 있다.
+
+```ts
+async function processInChunks<T>(
+  items: T[],
+  processItem: (item: T) => void,
+  chunkSize = 100
+) {
+  for (let index = 0; index < items.length; index += chunkSize) {
+    const chunk = items.slice(index, index + chunkSize);
+
+    for (const item of chunk) {
+      processItem(item);
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  }
+}
+```
+
+이 코드는 모든 작업을 한 번에 끝내지 않고, chunk 사이에 task를 양보한다. `setTimeout(0)`이 항상 최선은 아니지만, 핵심은 긴 동기 작업을 잘게 나눠 메인 스레드를 독점하지 않게 하는 것이다.
+
+요즘 환경에서는 `scheduler.yield()` 같은 API도 선택지가 될 수 있다. 다만 지원 범위와 폴백을 확인해야 한다.
+
+## 무거운 계산은 Web Worker로 옮길 수 있다
+
+사용자 입력과 직접 관련 없는 무거운 계산은 Web Worker로 분리할 수 있다. Worker는 메인 스레드 밖에서 JavaScript를 실행한다.
+
+예를 들어 대량 데이터 필터링, CSV 파싱, 이미지 메타데이터 처리처럼 UI 업데이트와 분리 가능한 작업은 Worker 후보가 된다.
+
+```ts
+const worker = new Worker(new URL("./search.worker.ts", import.meta.url));
+
+worker.postMessage({
+  type: "search",
+  keyword,
+  items
+});
+
+worker.onmessage = (event) => {
+  setResult(event.data.items);
+};
+```
+
+Worker가 항상 답은 아니다. 데이터를 Worker로 보내고 받는 비용도 있고, 구조도 복잡해진다. 작은 계산에는 오히려 과하다.
+
+좋은 기준은 간단하다. 메인 스레드에서 계산하는 동안 입력이 끊기고, 그 계산이 UI와 직접 연결되어 있지 않다면 Worker 분리를 검토할 만하다.
+
+## React에서는 급한 업데이트와 덜 급한 업데이트를 나눈다
+
+검색 UI를 예로 들어보자. 사용자가 입력한 글자는 즉시 반영되어야 한다. 하지만 큰 목록 필터링 결과는 약간 늦어도 괜찮을 수 있다.
+
+```tsx
+function SearchPage({ items }: { items: Item[] }) {
+  const [keyword, setKeyword] = useState("");
+  const deferredKeyword = useDeferredValue(keyword);
+
+  const filteredItems = useMemo(() => {
+    return filterItems(items, deferredKeyword);
+  }, [items, deferredKeyword]);
+
+  return (
+    <>
+      <input value={keyword} onChange={(event) => setKeyword(event.target.value)} />
+      <SearchResults items={filteredItems} />
+    </>
+  );
+}
+```
+
+`useDeferredValue`는 입력값 자체와 무거운 결과 계산의 우선순위를 분리하는 데 도움이 된다. 사용자는 input이 바로 반응한다고 느끼고, 목록은 조금 늦게 따라올 수 있다.
+
+모든 곳에 써야 하는 API는 아니다. 하지만 입력 반응성과 큰 렌더링 작업이 충돌할 때 유용한 선택지가 된다.
+
+## DOM 변경량도 INP에 영향을 준다
+
+이벤트 핸들러가 빨리 끝나도 다음 paint가 늦으면 사용자는 느리다고 느낀다. 예를 들어 클릭 한 번에 DOM 노드 수천 개를 새로 만들거나, 큰 레이아웃 변경을 일으키면 presentation delay가 커질 수 있다.
+
+큰 리스트라면 가상화가 필요할 수 있다.
+
+```tsx
+function Row({ item }: { item: Item }) {
+  return <div className="row">{item.name}</div>;
+}
+```
+
+전체 10,000개를 한 번에 렌더링하는 대신 화면에 보이는 30개 정도만 렌더링하면 React 비용뿐 아니라 브라우저 layout과 paint 비용도 줄어든다.
+
+성능을 볼 때 React 렌더링 시간만 보면 부족하다. React가 DOM 변경을 만들고, 그 DOM 변경을 브라우저가 계산하고 칠하는 시간까지 같이 봐야 한다.
+
+## 성능 최적화는 메인 스레드 예산 관리다
+
+INP를 개선할 때는 아래 질문들이 도움이 된다.
+
+- 입력 직전에 메인 스레드를 막는 긴 task가 있는가?
+- 이벤트 핸들러 안에서 꼭 지금 해야 하는 일만 하고 있는가?
+- 무거운 계산을 chunk로 나누거나 Worker로 옮길 수 있는가?
+- React 업데이트 중 급한 것과 덜 급한 것을 나눌 수 있는가?
+- 한 번의 interaction으로 DOM 변경을 너무 많이 만들고 있지 않은가?
+- DevTools 타임라인에서 layout과 paint가 과하게 잡히지 않는가?
+
+프론트엔드 성능은 "빠른 코드" 하나로 해결되지 않는다. 사용자 입력, JavaScript 실행, React 렌더링, 브라우저 paint가 모두 같은 메인 스레드 예산을 나눠 쓴다.
+
+그래서 반응성이 좋은 UI는 단순히 계산이 빠른 UI가 아니라, 중요한 입력이 들어왔을 때 브라우저가 바로 응답할 수 있게 일을 배치한 UI에 가깝다.
